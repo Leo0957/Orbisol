@@ -1,0 +1,566 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0021 /* WeatherApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0011 /* WeatherApp.swift */; };
+		0022 /* Location.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0012 /* Location.swift */; };
+		0023 /* WeatherResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0013 /* WeatherResponse.swift */; };
+		0024 /* HourlyForecast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0014 /* HourlyForecast.swift */; };
+		0025 /* DailyForecast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0015 /* DailyForecast.swift */; };
+		0026 /* WeatherService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0016 /* WeatherService.swift */; };
+		0027 /* WeatherAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0017 /* WeatherAPI.swift */; };
+		0028 /* LocationsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0018 /* LocationsViewModel.swift */; };
+		0029 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0019 /* MainView.swift */; };
+		002A /* LocationRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001A /* LocationRow.swift */; };
+		002B /* AddLocationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001B /* AddLocationView.swift */; };
+		002C /* DetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001C /* DetailView.swift */; };
+		002D /* WeatherIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001D /* WeatherIcon.swift */; };
+		0081 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0071 /* Theme.swift */; };
+		0082 /* ClockFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0072 /* ClockFormat.swift */; };
+		0083 /* ClocksListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0073 /* ClocksListView.swift */; };
+		0084 /* WeatherScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0074 /* WeatherScreen.swift */; };
+		0085 /* BigClockScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0075 /* BigClockScreen.swift */; };
+		0086 /* AirQualityResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0076 /* AirQualityResponse.swift */; };
+		0087 /* CurrentLocationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0077 /* CurrentLocationProvider.swift */; };
+		0088 /* RainNotifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0078 /* RainNotifier.swift */; };
+		008A /* TemperatureCurveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 007A /* TemperatureCurveView.swift */; };
+		0089 /* BottomTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0079 /* BottomTabBar.swift */; };
+		00B0 /* MeteoHeureWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 00A7 /* MeteoHeureWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		00B1 /* WidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00A8 /* WidgetBundle.swift */; };
+		00B2 /* Timeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00A9 /* Timeline.swift */; };
+		00B3 /* DayNightWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00AA /* DayNightWidgetView.swift */; };
+		00B4 /* WorldMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00AB /* WorldMap.swift */; };
+		00B5 /* SharedGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00AC /* SharedGroup.swift */; };
+		00F7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 00F6 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		00E1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0042 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 00D1;
+			remoteInfo = MeteoHeureWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		00C4 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				00B0 /* MeteoHeureWidget.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0002 /* MeteoHeure.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MeteoHeure.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0011 /* WeatherApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherApp.swift; sourceTree = "<group>"; };
+		0012 /* Location.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Location.swift; sourceTree = "<group>"; };
+		0013 /* WeatherResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherResponse.swift; sourceTree = "<group>"; };
+		0014 /* HourlyForecast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HourlyForecast.swift; sourceTree = "<group>"; };
+		0015 /* DailyForecast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyForecast.swift; sourceTree = "<group>"; };
+		0016 /* WeatherService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherService.swift; sourceTree = "<group>"; };
+		0017 /* WeatherAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherAPI.swift; sourceTree = "<group>"; };
+		0018 /* LocationsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationsViewModel.swift; sourceTree = "<group>"; };
+		0019 /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
+		001A /* LocationRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationRow.swift; sourceTree = "<group>"; };
+		001B /* AddLocationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddLocationView.swift; sourceTree = "<group>"; };
+		001C /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailView.swift; sourceTree = "<group>"; };
+		001D /* WeatherIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherIcon.swift; sourceTree = "<group>"; };
+		0071 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		0072 /* ClockFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClockFormat.swift; sourceTree = "<group>"; };
+		0073 /* ClocksListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClocksListView.swift; sourceTree = "<group>"; };
+		0074 /* WeatherScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherScreen.swift; sourceTree = "<group>"; };
+		0075 /* BigClockScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BigClockScreen.swift; sourceTree = "<group>"; };
+		0076 /* AirQualityResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirQualityResponse.swift; sourceTree = "<group>"; };
+		0077 /* CurrentLocationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentLocationProvider.swift; sourceTree = "<group>"; };
+		0078 /* RainNotifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RainNotifier.swift; sourceTree = "<group>"; };
+		007A /* TemperatureCurveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemperatureCurveView.swift; sourceTree = "<group>"; };
+		0079 /* BottomTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomTabBar.swift; sourceTree = "<group>"; };
+		00A7 /* MeteoHeureWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MeteoHeureWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		00A8 /* WidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBundle.swift; sourceTree = "<group>"; };
+		00A9 /* Timeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Timeline.swift; sourceTree = "<group>"; };
+		00AA /* DayNightWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayNightWidgetView.swift; sourceTree = "<group>"; };
+		00AB /* WorldMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldMap.swift; sourceTree = "<group>"; };
+		00AC /* SharedGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedGroup.swift; sourceTree = "<group>"; };
+		00AD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		00AE /* AppGroup.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AppGroup.entitlements; sourceTree = "<group>"; };
+		00F6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		0032 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		00C2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				0002 /* MeteoHeure.app */,
+				00A7 /* MeteoHeureWidget.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		0003 /* MeteoHeure */ = {
+			isa = PBXGroup;
+			children = (
+				0011 /* WeatherApp.swift */,
+				0004 /* Models */,
+				0005 /* Views */,
+				0006 /* ViewModels */,
+				0007 /* Services */,
+				0008 /* Resources */,
+				00F4 /* MeteoHeureWidget */,
+				00F5 /* Shared */,
+			);
+			path = MeteoHeure;
+			sourceTree = "<group>";
+		};
+		0004 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				0012 /* Location.swift */,
+				0013 /* WeatherResponse.swift */,
+				0014 /* HourlyForecast.swift */,
+				0015 /* DailyForecast.swift */,
+				0076 /* AirQualityResponse.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		0005 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				0019 /* MainView.swift */,
+				0079 /* BottomTabBar.swift */,
+				001A /* LocationRow.swift */,
+				001B /* AddLocationView.swift */,
+				001C /* DetailView.swift */,
+				001D /* WeatherIcon.swift */,
+				0071 /* Theme.swift */,
+				0072 /* ClockFormat.swift */,
+				0073 /* ClocksListView.swift */,
+				0074 /* WeatherScreen.swift */,
+				0075 /* BigClockScreen.swift */,
+				007A /* TemperatureCurveView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		0006 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				0018 /* LocationsViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		0007 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				0016 /* WeatherService.swift */,
+				0017 /* WeatherAPI.swift */,
+				0077 /* CurrentLocationProvider.swift */,
+				0078 /* RainNotifier.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		0008 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				00F6 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		00F4 /* MeteoHeureWidget */ = {
+			isa = PBXGroup;
+			children = (
+				00A8 /* WidgetBundle.swift */,
+				00A9 /* Timeline.swift */,
+				00AA /* DayNightWidgetView.swift */,
+				00AB /* WorldMap.swift */,
+				00AC /* SharedGroup.swift */,
+				00AD /* Info.plist */,
+			);
+			path = ../MeteoHeureWidget;
+			sourceTree = "<group>";
+		};
+		00F5 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				00AE /* AppGroup.entitlements */,
+			);
+			path = ../Shared;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0041 /* MeteoHeure */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0062 /* Build configuration list for PBXNativeTarget "MeteoHeure" */;
+			buildPhases = (
+				0031 /* Sources */,
+				0032 /* Frameworks */,
+				0033 /* Resources */,
+				00C4 /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				00E2 /* PBXTargetDependency */,
+			);
+			name = MeteoHeure;
+			productName = MeteoHeure;
+			productReference = 0002 /* MeteoHeure.app */;
+			productType = "com.apple.product-type.application";
+		};
+		00D1 /* MeteoHeureWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 00F3 /* Build configuration list for PBXNativeTarget "MeteoHeureWidget" */;
+			buildPhases = (
+				00C1 /* Sources */,
+				00C2 /* Frameworks */,
+				00C3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MeteoHeureWidget;
+			productName = MeteoHeureWidget;
+			productReference = 00A7 /* MeteoHeureWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0042 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					0041 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					00D1 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+				};
+			};
+			buildConfigurationList = 0061 /* Build configuration list for PBXProject "MeteoHeure" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = fr;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				fr,
+				Base,
+				en,
+			);
+			mainGroup = 0003;
+			productRefGroup = 0001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0041 /* MeteoHeure */,
+				00D1 /* MeteoHeureWidget */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		0033 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				00F7 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		00C3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0031 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0021 /* WeatherApp.swift in Sources */,
+				0022 /* Location.swift in Sources */,
+				0023 /* WeatherResponse.swift in Sources */,
+				0024 /* HourlyForecast.swift in Sources */,
+				0025 /* DailyForecast.swift in Sources */,
+				0026 /* WeatherService.swift in Sources */,
+				0027 /* WeatherAPI.swift in Sources */,
+				0028 /* LocationsViewModel.swift in Sources */,
+				0029 /* MainView.swift in Sources */,
+				002A /* LocationRow.swift in Sources */,
+				002B /* AddLocationView.swift in Sources */,
+				002C /* DetailView.swift in Sources */,
+				002D /* WeatherIcon.swift in Sources */,
+				0081 /* Theme.swift in Sources */,
+				0082 /* ClockFormat.swift in Sources */,
+				0083 /* ClocksListView.swift in Sources */,
+				0084 /* WeatherScreen.swift in Sources */,
+				0085 /* BigClockScreen.swift in Sources */,
+				0086 /* AirQualityResponse.swift in Sources */,
+				0087 /* CurrentLocationProvider.swift in Sources */,
+				0088 /* RainNotifier.swift in Sources */,
+				008A /* TemperatureCurveView.swift in Sources */,
+				0089 /* BottomTabBar.swift in Sources */,
+			);				runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		00C1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				00B1 /* WidgetBundle.swift in Sources */,
+				00B2 /* Timeline.swift in Sources */,
+				00B3 /* DayNightWidgetView.swift in Sources */,
+				00B4 /* WorldMap.swift in Sources */,
+				00B5 /* SharedGroup.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		00E2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 00D1 /* MeteoHeureWidget */;
+			targetProxy = 00E1 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0051 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		0052 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		0053 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Shared/AppGroup.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Météo · Heure";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Votre position sert à afficher la météo et l'heure de votre lieu actuel.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MODULE_CACHE_DIR = "$(PROJECT_TEMP_DIR)/ModuleCache";
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.meteoheure;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		0054 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Shared/AppGroup.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Météo · Heure";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Votre position sert à afficher la météo et l'heure de votre lieu actuel.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MODULE_CACHE_DIR = "$(PROJECT_TEMP_DIR)/ModuleCache";
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.meteoheure;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+
+		00F1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Shared/AppGroup.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = MeteoHeureWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.meteoheure.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		00F2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Shared/AppGroup.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = MeteoHeureWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.meteoheure.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0061 /* Build configuration list for PBXProject "MeteoHeure" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0051 /* Debug */,
+				0052 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0062 /* Build configuration list for PBXNativeTarget "MeteoHeure" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0053 /* Debug */,
+				0054 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		00F3 /* Build configuration list for PBXNativeTarget "MeteoHeureWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				00F1 /* Debug */,
+				00F2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 0042 /* Project object */;
+}

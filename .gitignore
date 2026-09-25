@@ -1,0 +1,13 @@
+# Métadonnées Xcode
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# Artefacts de build
+build/
+*.ipa
+*.dSYM.zip
+
+# Configuration API (contient les clés éventuelles — NE JAMAIS COMMITER)
+MeteoHeure/Services/WeatherAPI.swift

@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844">
+    <defs>
+      <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000" flood-opacity=".16"/>
+        <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#000" flood-opacity=".08"/>
+      </filter>
+      <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#1A1917" flood-opacity=".10"/>
+      </filter>
+      <linearGradient id="addGradient" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#F6CC88"/>
+        <stop offset=".45" stop-color="#9ED1E2"/>
+        <stop offset="1" stop-color="#5F92C9"/>
+      </linearGradient>
+      <linearGradient id="skyBand" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#EEC778"/>
+        <stop offset=".55" stop-color="#EAEAE6"/>
+        <stop offset="1" stop-color="#91B6D6"/>
+      </linearGradient>
+      <clipPath id="screenClip"><rect x="0" y="0" width="390" height="844" rx="38"/></clipPath>
+    </defs>
+    <rect width="390" height="844" rx="38" fill="#EAEAE6"/>
+    <g clip-path="url(#screenClip)">
+      
+    <g transform="translate(22 55)">
+      <path d="M2 4 L8.5 20 L15 5 L21.5 20 L28 4" fill="none" stroke="#1A1917" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="30" cy="16" r="2.7" fill="#E38A1D"/>
+    </g>
+    <g transform="translate(286 52)">
+      <rect width="82" height="31" rx="8" fill="none" stroke="#C2BFB7"/>
+      <rect x="4" y="4" width="36" height="23" rx="6" fill="#1A1917"/>
+      <text x="22" y="20" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10.5px;font-weight:800" fill="#EAEAE6">12h</text>
+      <text x="60" y="20" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10.5px;font-weight:800" fill="#1A1917">24h</text>
+    </g>
+      <line x1="0" x2="390" y1="92" y2="92" stroke="#D7D3CA"/>
+      
+  <g transform="translate(20 124)">
+    <text x="0" y="0" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:12px;font-weight:800;letter-spacing:2.4px" fill="#E38A1D">RÉGLAGES</text>
+    <text x="0" y="32" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:28px;font-weight:750;" fill="#1A1917">Préférences</text>
+    <text x="0" y="55" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:12px;font-weight:500;" fill="#85847C">Unités, alertes pluie et synchronisation</text>
+  </g>
+  <g transform="translate(20 205)">
+    <g transform="translate(0 0)">
+    <circle cx="11" cy="-4" r="11" fill="#E38A1D" opacity=".14"/>
+    <text x="11" y="1" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:15px;font-weight:800" fill="#E38A1D">+</text>
+    <text x="32" y="1" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:15px;font-weight:750;" fill="#1A1917">Ajouter une ville</text>
+    <path d="M338 -12 L348 -4 L338 4" fill="none" stroke="#C2BFB7" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+    <g transform="translate(0 54)">
+    <circle cx="11" cy="-4" r="11" fill="#E38A1D" opacity=".14"/>
+    <text x="11" y="1" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:15px;font-weight:800" fill="#E38A1D">⌖</text>
+    <text x="32" y="1" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:15px;font-weight:750;" fill="#1A1917">Ma position</text>
+    <path d="M338 -12 L348 -4 L338 4" fill="none" stroke="#C2BFB7" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+    <line x1="20" x2="370" y1="123" y2="123" stroke="#D7D3CA"/>
+  </g>
+  <g transform="translate(20 332)">
+    <g transform="translate(0 0)">
+    <text x="0" y="0" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10px;font-weight:800;letter-spacing:2px" fill="#85847C">UNITÉ</text>
+    <rect x="242" y="-22" width="48" height="25" rx="7" fill="#1A1917" stroke="#1A1917"/><text x="266" y="-5" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10.5px;font-weight:800" fill="#EAEAE6">°C</text><rect x="294" y="-22" width="48" height="25" rx="7" fill="transparent" stroke="#C2BFB7"/><text x="318" y="-5" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10.5px;font-weight:800" fill="#1A1917">°F</text>
+    <line x1="0" x2="350" y1="28" y2="28" stroke="#D7D3CA"/>
+  </g>
+    <g transform="translate(0 52)">
+    <text x="0" y="0" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10px;font-weight:800;letter-spacing:2px" fill="#85847C">FORMAT</text>
+    <rect x="224" y="-22" width="54" height="25" rx="7" fill="#1A1917" stroke="#1A1917"/><text x="251" y="-5" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10.5px;font-weight:800" fill="#EAEAE6">12h</text><rect x="282" y="-22" width="54" height="25" rx="7" fill="transparent" stroke="#C2BFB7"/><text x="309" y="-5" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10.5px;font-weight:800" fill="#1A1917">24h</text>
+    <line x1="0" x2="350" y1="28" y2="28" stroke="#D7D3CA"/>
+  </g>
+    <g transform="translate(0 104)">
+    <text x="0" y="0" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10px;font-weight:800;letter-spacing:2px" fill="#85847C">DONNÉES</text>
+    <text x="282" y="-3" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:12px;font-weight:800" fill="#E38A1D">Actualiser</text>
+    <line x1="0" x2="350" y1="28" y2="28" stroke="#D7D3CA"/>
+  </g>
+    <g transform="translate(0 156)">
+    <text x="0" y="0" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10px;font-weight:800;letter-spacing:2px" fill="#85847C">PLUIE</text>
+    <text x="199" y="-4" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:11px;font-weight:500" fill="#85847C">11 am · 55 %</text><rect x="292" y="-24" width="50" height="29" rx="14.5" fill="#E38A1D"/><circle cx="327" cy="-9.5" r="11.5" fill="#fff"/>
+    <line x1="0" x2="350" y1="28" y2="28" stroke="#D7D3CA"/>
+  </g>
+    <g transform="translate(0 208)">
+    <text x="0" y="0" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10px;font-weight:800;letter-spacing:2px" fill="#85847C">SEUIL</text>
+    <rect x="188" y="-22" width="48" height="25" rx="7" fill="transparent" stroke="#C2BFB7"/><text x="212" y="-5" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10.5px;font-weight:800" fill="#1A1917">40 %</text><rect x="240" y="-22" width="48" height="25" rx="7" fill="#1A1917" stroke="#1A1917"/><text x="264" y="-5" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10.5px;font-weight:800" fill="#EAEAE6">55 %</text><rect x="292" y="-22" width="48" height="25" rx="7" fill="transparent" stroke="#C2BFB7"/><text x="316" y="-5" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10.5px;font-weight:800" fill="#1A1917">70 %</text>
+    <line x1="0" x2="350" y1="28" y2="28" stroke="#D7D3CA"/>
+  </g>
+    <g transform="translate(0 260)">
+    <text x="0" y="0" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10px;font-weight:800;letter-spacing:2px" fill="#85847C">PRÉAVIS</text>
+    <rect x="172" y="-22" width="58" height="25" rx="7" fill="transparent" stroke="#C2BFB7"/><text x="201" y="-5" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10.5px;font-weight:800" fill="#1A1917">30 min</text><rect x="234" y="-22" width="45" height="25" rx="7" fill="#1A1917" stroke="#1A1917"/><text x="256.5" y="-5" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10.5px;font-weight:800" fill="#EAEAE6">1 h</text><rect x="283" y="-22" width="45" height="25" rx="7" fill="transparent" stroke="#C2BFB7"/><text x="305.5" y="-5" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10.5px;font-weight:800" fill="#1A1917">2 h</text>
+    <line x1="0" x2="350" y1="28" y2="28" stroke="#D7D3CA"/>
+  </g>
+    <g transform="translate(0 312)">
+    <text x="0" y="0" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10px;font-weight:800;letter-spacing:2px" fill="#85847C">SYNC ICLOUD</text>
+    <rect x="292" y="-24" width="50" height="29" rx="14.5" fill="#E38A1D"/><circle cx="327" cy="-9.5" r="11.5" fill="#fff"/>
+    <line x1="0" x2="350" y1="28" y2="28" stroke="#D7D3CA"/>
+  </g>
+    <g transform="translate(0 364)">
+    <text x="0" y="0" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:10px;font-weight:800;letter-spacing:2px" fill="#85847C">VILLES</text>
+    <text x="279" y="-3" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:12px;font-weight:800" fill="#B04132">Tout effacer</text>
+    <line x1="0" x2="350" y1="28" y2="28" stroke="#D7D3CA"/>
+  </g>
+  </g>
+
+      <g filter="url(#shadow)">
+        <rect x="14" y="758" width="362" height="68" rx="34" fill="rgba(255,255,255,.54)" stroke="rgba(255,255,255,.72)"/>
+        <rect x="14.5" y="758.5" width="361" height="67" rx="33.5" fill="none" stroke="rgba(26,25,23,.08)"/>
+        
+      
+      <circle cx="63" cy="784" r="8" fill="none" stroke="#85847C" stroke-width="1.7"/><path d="M63 779 V785 L67 787" fill="none" stroke="#85847C" stroke-width="1.7" stroke-linecap="round"/>
+      <text x="63" y="806" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:8.2px;font-weight:800;letter-spacing:.6px" fill="#85847C">HORLOGES</text>
+      
+      <circle cx="147" cy="780" r="5" fill="none" stroke="#85847C" stroke-width="1.6"/><path d="M140 789 H160 C166 789 166 780 159 781 C157 774 146 775 145 782" fill="none" stroke="#85847C" stroke-width="1.7" stroke-linecap="round"/>
+      <text x="151" y="806" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:8.2px;font-weight:800;letter-spacing:.6px" fill="#85847C">MÉTÉO</text>
+      
+      <path d="M229 791 A10 10 0 0 1 249 791" fill="none" stroke="#85847C" stroke-width="1.7" stroke-linecap="round"/><path d="M239 790 L245 782" stroke="#85847C" stroke-width="1.8" stroke-linecap="round"/><circle cx="239" cy="790" r="1.8" fill="#85847C"/>
+      <text x="239" y="806" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:8.2px;font-weight:800;letter-spacing:.6px" fill="#85847C">GRAND FORMAT</text>
+      <rect x="288" y="766" width="78" height="52" rx="26" fill="rgba(255,255,255,.72)" stroke="rgba(255,255,255,.92)"/>
+      <circle cx="327" cy="784" r="7" fill="none" stroke="#1A1917" stroke-width="1.7"/><path d="M327 772 V775 M327 793 V796 M315 784 H318 M336 784 H339" stroke="#1A1917" stroke-width="1.7" stroke-linecap="round"/>
+      <text x="327" y="806" text-anchor="middle" style="font-family:-apple-system,BlinkMacSystemFont,SF Pro Display,Helvetica Neue,Arial,sans-serif;font-size:8.2px;font-weight:800;letter-spacing:.6px" fill="#1A1917">RÉGLAGES</text>
+      </g>
+    </g>
+  </svg>
