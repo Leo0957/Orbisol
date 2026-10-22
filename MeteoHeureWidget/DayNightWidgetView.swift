@@ -3,21 +3,24 @@ import WidgetKit
 
 // MARK: - Palette du widget « Jour · Nuit »
 //
-// Calquée sur `Theme` de l'application (Météo · Heure) : papier chaud,
+// Calquée sur `Theme` de l'application (Orbisol) : papier chaud,
 // encre, gris doux et orange cuivre. Les couleurs « jour »/« nuit »
 // descendent de cette identité — jamais de bleu générique.
 
 enum WidgetPalette {
-    static let paper        = Color(red: 0.918, green: 0.918, blue: 0.902) // #EAEAE6 (Theme.paper)
-    static let paperBright  = Color(red: 0.965, green: 0.955, blue: 0.928) // étiquettes
-    static let ink          = Color(red: 0.10,  green: 0.10,  blue: 0.09)  // #191917 (Theme.ink)
-    static let dim          = Color(red: 0.52,  green: 0.52,  blue: 0.49)
+    static let paper        = adaptive(light: UIColor(white: 0.918, alpha: 1), dark: UIColor(white: 0.09, alpha: 1))
+    static let paperBright  = adaptive(light: UIColor(white: 0.965, alpha: 1), dark: UIColor(white: 0.16, alpha: 1))
+    static let ink          = adaptive(light: UIColor(white: 0.10, alpha: 1), dark: UIColor(white: 0.95, alpha: 1))
+    static let dim          = adaptive(light: UIColor(white: 0.45, alpha: 1), dark: UIColor(white: 0.70, alpha: 1))
     static let faint        = Color(red: 0.76,  green: 0.75,  blue: 0.72)
     static let line         = Color(red: 0.84,  green: 0.83,  blue: 0.80)
     static let accent       = Color(red: 0.890, green: 0.537, blue: 0.114) // orange cuivre
     static let sun          = Color(red: 0.98,  green: 0.62,  blue: 0.22)  // éclat solaire
     static let night        = Color(red: 0.35,  green: 0.34,  blue: 0.31)  // brun-gris de nuit
     static let veil         = Color(red: 0.56,  green: 0.545, blue: 0.50)  // voile nuit
+    private static func adaptive(light: UIColor, dark: UIColor) -> Color {
+        Color(uiColor: UIColor { $0.userInterfaceStyle == .dark ? dark : light })
+    }
 }
 
 // MARK: - Astronomie solaire

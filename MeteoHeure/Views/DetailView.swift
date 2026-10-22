@@ -12,15 +12,12 @@ struct DetailView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: WeatherStyle.gradientColors(code: weatherCode,
-                                                               isDay: isDay),
-                           startPoint: .top, endPoint: .bottom)
-                .ignoresSafeArea()
+            Theme.paper.ignoresSafeArea()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     header
-                    if isLoading {
+                    if isLoading && current == nil {
                         loadingState
                     } else if let current = current {
                         currentSection(current)
@@ -72,7 +69,7 @@ struct DetailView: View {
                 .foregroundStyle(.secondary)
             // Heure locale en direct (mise à jour chaque seconde via `now`).
             Text(liveTime)
-                .font(.system(size: 34, weight: .light, design: .rounded))
+                .clockTypeface(34, weight: .light)
                 .monospacedDigit()
                 .padding(.top, 2)
             Text(liveDate)
@@ -231,7 +228,7 @@ struct DetailView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text(sunTimesText)
-                .font(.title3.weight(.semibold))
+                .clockTypeface(20, weight: .semibold)
                 .monospacedDigit()
             Text("lever · coucher")
                 .font(.caption)
@@ -326,7 +323,7 @@ struct DetailView: View {
     private func hourCell(_ forecast: HourlyForecast) -> some View {
         VStack(spacing: 8) {
             Text(hourLabel(forecast.date))
-                .font(.callout)
+                .clockTypeface(16)
                 .monospacedDigit()
             Image(systemName: WeatherStyle.symbol(code: forecast.weatherCode, isDay: true))
                 .font(.title3)
@@ -355,11 +352,13 @@ struct DetailView: View {
         let probabilities = hourly.precipitationProbability ?? []
         let uvValues = hourly.uvIndex ?? []
         for index in hourly.time.indices {
+            guard hourly.temperature2m.indices.contains(index), hourly.weatherCode.indices.contains(index),
+                  let temperature = hourly.temperature2m[index], let code = hourly.weatherCode[index] else { continue }
             let probability = probabilities.indices.contains(index) ? probabilities[index] : nil
             let uv = uvValues.indices.contains(index) ? uvValues[index] : nil
             if let forecast = HourlyForecast(hourText: hourly.time[index],
-                                             temperature: hourly.temperature2m[index],
-                                             weatherCode: hourly.weatherCode[index],
+                                             temperature: temperature,
+                                             weatherCode: code,
                                              precipitationProbability: probability,
                                              uvIndex: uv,
                                              timeZone: timeZone) {
@@ -387,7 +386,11 @@ struct DetailView: View {
             sectionTitle("7 prochains jours")
             VStack(spacing: 0) {
                 ForEach(dailyForecasts) { forecast in
-                    dayRow(forecast)
+                    NavigationLink {
+                        DayForecastView(location: location, date: forecast.date)
+                    } label: {
+                        dayRow(forecast)
+                    }.buttonStyle(.plain)
                     if forecast.id != dailyForecasts.last?.id {
                         Divider().opacity(0.5)
                     }
@@ -421,6 +424,7 @@ struct DetailView: View {
         guard let daily = weather?.daily else { return [] }
         var forecasts: [DailyForecast] = []
         for index in daily.time.indices {
+            guard daily.temperature2mMin.indices.contains(index), daily.temperature2mMax.indices.contains(index), daily.weatherCode.indices.contains(index) else { continue }
             if let forecast = DailyForecast(dateText: daily.time[index],
                                             minTemperature: daily.temperature2mMin[index],
                                             maxTemperature: daily.temperature2mMax[index],
@@ -483,10 +487,11 @@ struct DetailView: View {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "fr_FR")
         formatter.timeZone = timeZone
-        let today = Calendar.current.startOfDay(for: viewModel.now)
-        let day = Calendar.current.startOfDay(for: date)
+        let calendar = WorldTime.calendar(timeZone)
+        let today = calendar.startOfDay(for: viewModel.now)
+        let day = calendar.startOfDay(for: date)
         if day == today { return "Auj." }
-        if day == today.addingTimeInterval(86400) { return "Dem." }
+        if day == calendar.date(byAdding: .day, value: 1, to: today) { return "Dem." }
         formatter.dateFormat = "EEE"
         return formatter.string(from: date)
     }

@@ -13,6 +13,8 @@ struct Location: Identifiable, Codable, Hashable {
     var timeZoneIdentifier: String
     /// Préférence d'unité propre à ce lieu (nil = suivre le réglage global).
     var prefersFahrenheit: Bool?
+    var group: String?
+    var favorite: Bool?
 
     /// Fuseau horaire IANA de la ville (ex. "Europe/Paris").
     /// C'est lui qui permet d'afficher l'heure locale réelle du lieu.
@@ -36,6 +38,14 @@ struct Location: Identifiable, Codable, Hashable {
         if let country, !country.isEmpty { return country }
         if let region, !region.isEmpty { return region }
         return name
+    }
+
+    /// Identifie le même résultat géographique sans confondre des villages
+    /// proches qui se trouvaient auparavant dans le rayon de déduplication.
+    func isSamePlace(as other: Location) -> Bool {
+        abs(latitude - other.latitude) < 0.0001 &&
+        abs(longitude - other.longitude) < 0.0001 &&
+        name.localizedCaseInsensitiveCompare(other.name) == .orderedSame
     }
 
     init(id: UUID = UUID(),

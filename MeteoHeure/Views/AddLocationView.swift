@@ -5,12 +5,14 @@ import SwiftUI
 struct AddLocationView: View {
     @EnvironmentObject private var viewModel: LocationsViewModel
     @Environment(\.dismiss) private var dismiss
+    var onAdded: (() -> Void)? = nil
 
     @State private var query = ""
     @State private var results: [Location] = []
     @State private var isSearching = false
     @State private var searchErrorMessage: String?
     @State private var searchTask: Task<Void, Never>?
+    @State private var preview: Location?
 
     var body: some View {
         NavigationStack {
@@ -28,9 +30,9 @@ struct AddLocationView: View {
                         .listRowBackground(Color.clear)
                 } else if query.count < 2 {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Recherchez une ville, un pays ou une région.")
+                        Text("Recherchez une ville ou un village partout dans le monde.")
                             .font(.subheadline)
-                        Text("Par exemple : Abidjan, Québec, Tokyo…")
+                        Text("Essayez « Reims », « Renty, France » ou un code postal. Ajoutez le pays pour départager les homonymes.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -43,7 +45,7 @@ struct AddLocationView: View {
                 } else {
                     ForEach(results) { location in
                         Button {
-                            addAndDismiss(location)
+                            preview = location
                         } label: {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
@@ -55,7 +57,7 @@ struct AddLocationView: View {
                                         .foregroundStyle(.secondary)
                                 }
                                 Spacer()
-                                Image(systemName: "plus.circle")
+                                Image(systemName: isSaved(location) ? "checkmark.circle" : "chevron.right")
                                     .foregroundStyle(.tint)
                             }
                         }
@@ -65,7 +67,7 @@ struct AddLocationView: View {
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .background(Theme.paper)
-            .navigationTitle("Ajouter une ville")
+            .navigationTitle("Chercher une ville")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.light, for: .navigationBar)
             .toolbarBackground(Theme.paper, for: .navigationBar)
@@ -75,10 +77,20 @@ struct AddLocationView: View {
                 }
             }
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always),
-                        prompt: "Ville, pays, région…")
+                        prompt: "Ville, village ou code postal…")
             .tint(Theme.accent)
             .onChange(of: query) { newQuery in
                 scheduleSearch(newQuery)
+            }
+            .onDisappear { searchTask?.cancel() }
+            .sheet(item: $preview) { location in
+                CitySearchPreview(location: location, isSaved: isSaved(location)) {
+                    viewModel.addAndSelect(location)
+                    preview = nil
+                    dismiss()
+                    onAdded?()
+                }
+                .environmentObject(viewModel)
             }
         }
     }
@@ -102,18 +114,23 @@ struct AddLocationView: View {
         let task = Task {
             try? await Task.sleep(nanoseconds: 300_000_000) // debounce
             guard !Task.isCancelled else { return }
-            let found = await viewModel.searchLocations(query: trimmed)
-            guard !Task.isCancelled else { return }
-            searchErrorMessage = found.isEmpty ? "Aucun résultat pour « \(trimmed) »." : nil
-            results = found
+            do {
+                let found = try await viewModel.searchLocations(query: trimmed)
+                guard !Task.isCancelled else { return }
+                searchErrorMessage = found.isEmpty ? "Aucun résultat pour « \(trimmed) ». Essayez le nom local ou un code postal." : nil
+                results = found
+            } catch {
+                guard !Task.isCancelled else { return }
+                results = []
+                searchErrorMessage = "Recherche indisponible : \(error.localizedDescription)"
+            }
             isSearching = false
         }
         searchTask = task
     }
 
-    private func addAndDismiss(_ location: Location) {
-        viewModel.add(location)
-        dismiss()
+    private func isSaved(_ location: Location) -> Bool {
+        viewModel.savedMatch(for: location) != nil
     }
 
     private func subtitle(for location: Location) -> String {
@@ -133,6 +150,65 @@ struct AddLocationView: View {
         let minutes = abs(totalMinutes) % 60
         if minutes == 0 { return "UTC\(sign)\(hours)" }
         return String(format: "UTC%@%d:%02d", sign, hours, minutes)
+    }
+}
+
+/// Aperçu réseau indépendant : consulter une ville ne l'enregistre pas.
+struct CitySearchPreview: View {
+    @EnvironmentObject private var viewModel: LocationsViewModel
+    @Environment(\.dismiss) private var dismiss
+    let location: Location
+    let isSaved: Bool
+    let onAdd: () -> Void
+    @State private var weather: OpenMeteoResponse?
+    @State private var error: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    if !location.subtitle.isEmpty { Text(location.subtitle) }
+                    Text("Heure locale : \(WorldTime.time(Date(), zone: location.timeZone ?? .current))")
+                } header: { Text(location.name) }
+                Section("Météo actuelle") {
+                    if let current = weather?.current {
+                        Label("\(viewModel.tempText(current.temperature2m, for: location)) · \(WeatherStyle.conditionName(code: current.weatherCode))",
+                              systemImage: WeatherStyle.symbol(code: current.weatherCode, isDay: current.isDay == 1))
+                        Text("Ressenti : \(viewModel.tempText(current.apparentTemperature, for: location))")
+                        Text("Humidité : \(current.relativeHumidity2m) %")
+                        Text("Vent : \(viewModel.windText(kmPerHour: current.windSpeed10m, for: location))")
+                    } else if let error {
+                        Text(error).foregroundStyle(.secondary)
+                    } else {
+                        ProgressView("Chargement de la météo…")
+                    }
+                }
+                if let daily = weather?.daily {
+                    Section("Prochains jours") {
+                        ForEach(0..<min(3, daily.time.count, daily.temperature2mMin.count, daily.temperature2mMax.count), id: \.self) { index in
+                            HStack {
+                                Text(daily.time[index])
+                                Spacer()
+                                Text("\(viewModel.tempText(daily.temperature2mMin[index], for: location)) – \(viewModel.tempText(daily.temperature2mMax[index], for: location))")
+                            }
+                        }
+                    }
+                }
+                Section {
+                    Button(isSaved ? "Voir la météo dans Orbisol" : "Ajouter et voir la météo") { onAdd() }
+                        .font(.headline)
+                    Text("La météo est une prévision pour les coordonnées de cette localité ; elle ne provient pas forcément d'une station dans le village.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle(location.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Fermer") { dismiss() } } }
+            .task(id: location.id) {
+                do { weather = try await WeatherService().fetchWeather(for: location) }
+                catch { self.error = "Météo indisponible pour le moment : \(error.localizedDescription)" }
+            }
+        }
     }
 }
 

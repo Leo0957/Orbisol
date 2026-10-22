@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>BGTaskSchedulerPermittedIdentifiers</key>
+    <array><string>com.example.meteoheure.weather-refresh</string></array>
+    <key>UIBackgroundModes</key>
+    <array><string>fetch</string></array>
+    <key>NSCalendarsUsageDescription</key>
+    <string>Ajouter un rendez-vous choisi dans le comparateur Orbisol.</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>Lire un événement choisi pour créer un voyage dans Orbisol.</string>
+    <key>CFBundleURLTypes</key>
+    <array><dict>
+        <key>CFBundleURLName</key><string>Orbisol city</string>
+        <key>CFBundleURLSchemes</key><array><string>orbisol</string></array>
+    </dict></array>
+</dict>
+</plist>

@@ -109,8 +109,7 @@ extension SharedGroup {
     static func savedCities() -> [WidgetCity] {
         if let defaults = sharedDefaults,
            let data = defaults.data(forKey: locationsKey),
-           let cities = try? JSONDecoder().decode([WidgetCity].self, from: data),
-           !cities.isEmpty {
+           let cities = try? JSONDecoder().decode([WidgetCity].self, from: data) {
             return cities
         }
         return [

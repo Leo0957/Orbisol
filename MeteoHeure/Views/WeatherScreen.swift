@@ -4,8 +4,13 @@ import SwiftUI
 ///  - en-tête : ville (orange), date, grande température + condition\n    - bannière discrète de pluie à venir (« PAS DE PLUIE PRÉVUE — 24 H »)\n    - globe pointilliste centré sur la ville (dégradé pêche → bleu, marqueur orange)\n    - lever / durée / coucher du soleil et arc pointillé avec la position du soleil
 struct WeatherScreen: View {
     @EnvironmentObject private var viewModel: LocationsViewModel
+    @AppStorage("Orbisol.highLegibility") private var highLegibility = false
+    @ScaledMetric(relativeTo: .largeTitle) private var temperatureSize: CGFloat = 58
     let location: Location
     let onForecast: () -> Void
+    let onAddCity: () -> Void
+    @State private var showRadar = false
+    @State private var showHistory = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -14,15 +19,29 @@ struct WeatherScreen: View {
                     .padding(.top, 14)
                 rainBanner
                     .padding(.top, 12)
+                Button(action: onForecast) { Label("Prévisions détaillées", systemImage: "chart.xyaxis.line") }
+                    .font(.subheadline).padding(.vertical, 12)
+                Button { showRadar = true } label: { Label("Radar de pluie", systemImage: "map") }.font(.subheadline)
+                Button { showHistory = true } label: { Label("Historique météo", systemImage: "calendar") }.font(.subheadline).padding(.top, 8)
                 GlobeView(location: location,
                           others: viewModel.locations.filter { $0.id != location.id })
-                    .frame(width: 300, height: 300)
+                    .frame(maxWidth: 420)
                     .padding(.top, 2)
                 sunSection
                     .padding(.top, 6)
+                WeatherInsightsView(location: location)
+                    .padding(.top, 18)
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 28)
+        }
+        .simultaneousGesture(citySwipeGesture)
+        .refreshable { await viewModel.refreshWeather(for: location, force: true) }
+        .sheet(isPresented: $showRadar) {
+            NavigationStack { RadarView(location: location).toolbar { Button("Fermer") { showRadar = false } } }
+        }
+        .sheet(isPresented: $showHistory) {
+            NavigationStack { HistoricalWeatherView(location: location).toolbar { Button("Fermer") { showHistory = false } } }
         }
     }
 
@@ -31,10 +50,7 @@ struct WeatherScreen: View {
     private var topRow: some View {
         HStack(alignment: .bottom, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(location.name.uppercased())
-                    .font(.system(size: 13, weight: .bold))
-                    .tracking(2.4)
-                    .foregroundStyle(Theme.accent)
+                cityPicker
                 Text(dayLine)
                     .font(Theme.label(15, .semibold))
                     .foregroundStyle(Theme.dim)
@@ -45,8 +61,8 @@ struct WeatherScreen: View {
             Spacer(minLength: 6)
             VStack(alignment: .trailing, spacing: 3) {
                 Text(tempDigits)
-                    .font(Theme.digit(58, .bold))
-                    .tracking(-1)
+                    .font(Theme.digit(highLegibility ? temperatureSize * 1.1 : temperatureSize, .bold))
+                    .tracking(0)
                     .monospacedDigit()
                     .foregroundStyle(Theme.ink)
                     .contextMenu {
@@ -62,7 +78,7 @@ struct WeatherScreen: View {
                         }
                     }
                 Text(conditionLine)
-                    .font(.system(size: 11.5, weight: .medium))
+                    .font(highLegibility ? .system(.subheadline, weight: .bold) : .system(size: 11.5, weight: .medium))
                     .tracking(1.4)
                     .foregroundStyle(Theme.dim)
             }
@@ -71,6 +87,64 @@ struct WeatherScreen: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel("\(tempDigits), \(conditionLine), prévisions")
             .accessibilityAddTraits(.isButton)
+        }
+    }
+
+    /// Le nom de la ville sert de sélecteur sans alourdir l'en-tête météo.
+    private var cityPicker: some View {
+        Menu {
+            Button(action: onAddCity) {
+                Label("Ajouter une ville…", systemImage: "plus")
+            }
+            if !viewModel.locations.isEmpty {
+                Divider()
+            }
+            ForEach(viewModel.locations) { city in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        viewModel.select(city.id)
+                    }
+                } label: {
+                    if city.id == location.id {
+                        Label(city.name, systemImage: "checkmark")
+                    } else {
+                        Text(city.name)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Text(location.name.uppercased())
+                    .font(.system(size: 13, weight: .bold))
+                    .tracking(2.4)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .foregroundStyle(Theme.accent)
+            .frame(minHeight: 30)
+            .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Ville météo, \(location.name)")
+        .accessibilityHint("Touchez pour choisir une autre ville")
+    }
+
+    /// Balayer horizontalement permet de parcourir rapidement les villes suivies.
+    private var citySwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 35)
+            .onEnded { value in
+                guard abs(value.translation.width) > abs(value.translation.height) * 1.4,
+                      abs(value.translation.width) > 55 else { return }
+                selectAdjacentCity(direction: value.translation.width < 0 ? 1 : -1)
+            }
+    }
+
+    private func selectAdjacentCity(direction: Int) {
+        guard viewModel.locations.count > 1,
+              let currentIndex = viewModel.locations.firstIndex(where: { $0.id == location.id }) else { return }
+        let count = viewModel.locations.count
+        let nextIndex = (currentIndex + direction + count) % count
+        withAnimation(.easeInOut(duration: 0.22)) {
+            viewModel.select(viewModel.locations[nextIndex].id)
         }
     }
 
@@ -84,12 +158,10 @@ struct WeatherScreen: View {
                     .tracking(1.7)
                     .foregroundStyle(rainLineColor)
             }
-            if isStale, let freshness = viewModel.freshnessText(for: location) {
-                Text(freshness.uppercased())
+            Text(viewModel.dataStatus(for: location).label.uppercased())
                     .font(.system(size: 9, weight: .medium))
                     .tracking(1.3)
-                    .foregroundStyle(Theme.accent)
-            }
+                    .foregroundStyle(isStale ? Theme.accent : Theme.dim)
         }
         .frame(maxWidth: .infinity)
     }
@@ -109,8 +181,10 @@ struct WeatherScreen: View {
     }
 
     private var isStale: Bool {
-        guard let date = viewModel.lastFetchDate(for: location) else { return false }
-        return Date().timeIntervalSince(date) > 30 * 60
+        switch viewModel.dataStatus(for: location) {
+        case .old, .offline, .unavailable: return true
+        case .loading, .current: return false
+        }
     }
 
     private var dayLine: String {
@@ -171,7 +245,7 @@ struct WeatherScreen: View {
             }
             .frame(height: 18)
             Text(value)
-                .font(Theme.digit(16, .semibold))
+                .clockTypeface(16, weight: .semibold)
                 .monospacedDigit()
                 .foregroundStyle(Theme.ink)
             Text(label.uppercased())
@@ -250,81 +324,148 @@ struct WeatherScreen: View {
     }
 }
 
-// MARK: - Globe pointilliste
+// MARK: - Globe pointilliste interactif
 
-/// Globe de points (grille latitude / longitude projetée) posé sur un disque
-/// en dégradé doux pêche → bleu, comme sur la maquette. La ville sélectionnée
-/// est marquée d'un point orange cerclé, les autres d'un point gris discret.
 struct GlobeView: View {
     let location: Location
     let others: [Location]
+    var date: Date = Date()
+    @State private var longitudeOffset = 0.0
+    @State private var latitudeOffset = 0.0
+    @GestureState private var drag = CGSize.zero
 
-    var body: some View {
-        ZStack {
-            backdrop
-            Canvas { ctx, size in
-                let width = size.width
-                let height = size.height
-                let radius = min(width, height) * 0.43
-                let cx = width / 2
-                let cy = height / 2
-                let rotation = -location.longitude * .pi / 180
-
-                func project(_ lat: Double, _ lon: Double) -> (x: CGFloat, y: CGFloat, z: Double) {
-                    let la = lat * .pi / 180
-                    let lo = lon * .pi / 180 + rotation
-                    let x = cos(la) * sin(lo)
-                    let y = sin(la)
-                    let z = cos(la) * cos(lo)
-                    return (cx + x * radius, cy - y * radius, z)
-                }
-
-                // Grille de points, plus denses et plus sombres au centre.
-                for lat in stride(from: -80.0, through: 80.0, by: 6.5) {
-                    for lon in stride(from: -180.0, to: 180.0, by: 6.5) {
-                        let p = project(lat, lon)
-                        guard p.z > 0.02 else { continue }
-                        let alpha = 0.12 + p.z * 0.40
-                        let dot = 1.0 + p.z * 1.25
-                        ctx.fill(Path(ellipseIn: CGRect(x: p.x - dot, y: p.y - dot,
-                                                        width: dot * 2, height: dot * 2)),
-                                 with: .color(Theme.ink.opacity(alpha)))
-                    }
-                }
-
-                // Les autres villes suivies : simples points gris foncé.
-                for city in others {
-                    let p = project(city.latitude, city.longitude)
-                    guard p.z > 0 else { continue }
-                    ctx.fill(Path(ellipseIn: CGRect(x: p.x - 2.5, y: p.y - 2.5, width: 5, height: 5)),
-                             with: .color(Theme.ink.opacity(0.55)))
-                }
-
-                // Ville sélectionnée : point orange + anneau concentrique.
-                let selected = project(location.latitude, location.longitude)
-                if selected.z > 0 {
-                    ctx.fill(Path(ellipseIn: CGRect(x: selected.x - 5.5, y: selected.y - 5.5,
-                                                    width: 11, height: 11)),
-                             with: .color(Theme.accent))
-                    ctx.stroke(Path(ellipseIn: CGRect(x: selected.x - 12, y: selected.y - 12,
-                                                      width: 24, height: 24)),
-                               with: .color(Theme.accent.opacity(0.85)), lineWidth: 1.6)
-                }
-            }
-        }
+    private func wrapped(_ value: Double) -> Double {
+        (value + 180).truncatingRemainder(dividingBy: 360) < 0
+            ? (value + 180).truncatingRemainder(dividingBy: 360) + 180
+            : (value + 180).truncatingRemainder(dividingBy: 360) - 180
     }
 
-    /// Disque doux pêche (haut-gauche) → bleu-gris (bas-droite), bord fondu.
-    private var backdrop: some View {
-        Circle()
-            .fill(LinearGradient(colors: [
-                Color(red: 0.99, green: 0.82, blue: 0.60).opacity(0.85),
-                Color(red: 0.78, green: 0.87, blue: 0.97).opacity(0.6)
-            ], startPoint: .topLeading, endPoint: .bottomTrailing))
-            .frame(width: 276, height: 276)
-            .mask(Circle().fill(RadialGradient(colors: [Color.white.opacity(0.95),
-                                                        Color.white.opacity(0.0)],
-                                               center: .center,
-                                               startRadius: 60, endRadius: 138)))
+    var body: some View {
+        VStack(spacing: 4) {
+            GeometryReader { geometry in
+                let sensitivity = 180 / max(geometry.size.width, 1)
+                let centerLongitude = location.longitude + longitudeOffset - Double(drag.width * sensitivity)
+                let centerLatitude = max(-85, min(85, location.latitude + latitudeOffset + Double(drag.height * sensitivity)))
+                Canvas { context, size in
+                    let radius = min(size.width, size.height) * 0.46
+                    let center = CGPoint(x: size.width / 2, y: size.height / 2)
+                    let yaw = centerLongitude * .pi / 180
+                    let pitch = centerLatitude * .pi / 180
+                    let sy = sin(yaw), cy = cos(yaw)
+                    let sp = sin(pitch), cp = cos(pitch)
+
+                    func project(_ vector: GlobeLand.Point) -> (point: CGPoint, depth: Double) {
+                        let x = vector.x * cy - vector.z * sy
+                        let z = vector.x * sy + vector.z * cy
+                        let y = vector.y * cp - z * sp
+                        return (CGPoint(x: center.x + x * radius, y: center.y - y * radius),
+                                vector.y * sp + z * cp)
+                    }
+                    func vector(_ lat: Double, _ lon: Double) -> GlobeLand.Point {
+                        let a = lat * .pi / 180, b = lon * .pi / 180
+                        return .init(x: cos(a) * sin(b), y: sin(a), z: cos(a) * cos(b))
+                    }
+
+                    let disk = Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius,
+                                                     width: radius * 2, height: radius * 2))
+                    context.fill(disk, with: .radialGradient(
+                        Gradient(colors: [Theme.paper, Theme.ink.opacity(0.08)]),
+                        center: CGPoint(x: center.x - radius * 0.3, y: center.y - radius * 0.4),
+                        startRadius: 0, endRadius: radius * 1.5))
+                    context.stroke(disk, with: .color(Theme.ink.opacity(0.17)), lineWidth: 0.6)
+
+                    // Clip each line at the horizon; never join across the hidden hemisphere.
+                    func gridLine(_ samples: [GlobeLand.Point]) {
+                        var line = Path()
+                        var drawing = false
+                        for sample in samples {
+                            let p = project(sample)
+                            if p.depth > 0 {
+                                if drawing { line.addLine(to: p.point) } else { line.move(to: p.point) }
+                                drawing = true
+                            } else {
+                                drawing = false
+                            }
+                        }
+                        context.stroke(line, with: .color(Theme.ink.opacity(0.10)), lineWidth: 0.5)
+                    }
+                    for lat in stride(from: -60.0, through: 60.0, by: 30) {
+                        gridLine(stride(from: -180.0, through: 180.0, by: 3).map { vector(lat, $0) })
+                    }
+                    for lon in stride(from: -180.0, to: 180.0, by: 30) {
+                        gridLine(stride(from: -90.0, through: 90.0, by: 3).map { vector($0, lon) })
+                    }
+
+                    let sun = SolarPosition.sun(at: date)
+                    let lat = sun.latitude * .pi / 180, lon = sun.longitude * .pi / 180
+                    for sample in GlobeLand.points {
+                        let p = project(sample)
+                        guard p.depth > 0.015 else { continue }
+                        let dot = radius * (0.0025 + 0.0035 * p.depth)
+                        let illumination = sample.x * cos(lat) * sin(lon) + sample.y * sin(lat) + sample.z * cos(lat) * cos(lon)
+                        context.fill(Path(ellipseIn: CGRect(x: p.point.x - dot, y: p.point.y - dot,
+                                                             width: dot * 2, height: dot * 2)),
+                                     with: .color(illumination > 0 ? Theme.accent.opacity(0.45 + p.depth * 0.45) : Theme.ink.opacity(0.16 + p.depth * 0.25)))
+                    }
+                    for city in others {
+                        let p = project(vector(city.latitude, city.longitude))
+                        guard p.depth > 0.02 else { continue }
+                        context.fill(Path(ellipseIn: CGRect(x: p.point.x - 2, y: p.point.y - 2,
+                                                             width: 4, height: 4)),
+                                     with: .color(Theme.dim))
+                    }
+                    let selected = project(vector(location.latitude, location.longitude))
+                    if selected.depth > 0.03 {
+                        let p = selected.point
+                        context.fill(Path(ellipseIn: CGRect(x: p.x - 4.5, y: p.y - 4.5, width: 9, height: 9)),
+                                     with: .color(Theme.accent))
+                        context.stroke(Path(ellipseIn: CGRect(x: p.x - 10, y: p.y - 10, width: 20, height: 20)),
+                                       with: .color(Theme.accent.opacity(0.75)), lineWidth: 1.3)
+                        context.draw(Text(location.name.uppercased())
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(Theme.ink),
+                            at: CGPoint(x: min(size.width - 45, max(45, p.x)), y: max(12, p.y - 20)))
+                    }
+                }
+                .contentShape(Circle())
+                .highPriorityGesture(
+                    DragGesture(minimumDistance: 3)
+                        .updating($drag) { value, state, _ in state = value.translation }
+                        .onEnded { value in
+                            longitudeOffset = wrapped(longitudeOffset - Double(value.translation.width * sensitivity))
+                            let latitude = max(-85, min(85, location.latitude + latitudeOffset + Double(value.translation.height * sensitivity)))
+                            latitudeOffset = latitude - location.latitude
+                        }
+                )
+                .accessibilityElement()
+                .accessibilityLabel("Globe terrestre, " + location.name)
+                .accessibilityHint("Balayez vers le haut ou le bas pour faire tourner le globe.")
+                .accessibilityAdjustableAction { direction in
+                    longitudeOffset = wrapped(longitudeOffset + (direction == .increment ? 25 : -25))
+                }
+            }
+            .aspectRatio(1, contentMode: .fit)
+            HStack {
+                Text("Glissez pour explorer")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.dim)
+                Spacer()
+                Button {
+                    longitudeOffset = 0
+                    latitudeOffset = 0
+                } label: {
+                    Label("Recentrer", systemImage: "location")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Theme.accent)
+                        .frame(minHeight: 44)
+                }
+                .accessibilityLabel("Recentrer sur " + location.name)
+            }
+            .padding(.horizontal, 10)
+        }
+        .onChange(of: location.id) { _ in
+            longitudeOffset = 0
+            latitudeOffset = 0
+        }
     }
 }

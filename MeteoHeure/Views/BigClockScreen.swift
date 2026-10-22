@@ -8,8 +8,52 @@ import SwiftUI
 struct BigClockScreen: View {
     @EnvironmentObject private var viewModel: LocationsViewModel
     let location: Location
+    @AppStorage("Orbisol.clock.seconds") private var showSeconds = true
+    @AppStorage("Orbisol.clock.date") private var showDate = true
+    @AppStorage("Orbisol.clock.weather") private var showWeather = true
+    @AppStorage("Orbisol.clock.nightAuto") private var nightAuto = false
+    @State private var showNight = false
+    private var nightTime: Bool { Calendar.current.component(.hour, from: viewModel.now) >= 22 || Calendar.current.component(.hour, from: viewModel.now) < 8 }
 
     var body: some View {
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: 12) {
+                    Button { showNight = true } label: { Label("Mode nuit", systemImage: "moon.fill") }
+                    if geometry.size.width > geometry.size.height {
+                        header
+                        Text(hourText + ":" + minuteText + (showSeconds ? ":" + secondText : ""))
+                            .clockTypeface(90, weight: .light).monospacedDigit()
+                            .lineLimit(1).minimumScaleFactor(0.4)
+                            .frame(maxWidth: .infinity)
+                    } else {
+                        portraitClock
+                    }
+                    if showDate {
+                        Text(localDate).font(.headline).foregroundStyle(Theme.dim)
+                    }
+                    if showWeather, let current = viewModel.weatherByLocation[location.id]?.current {
+                        Label("\(viewModel.tempText(current.temperature2m, for: location)) · \(WeatherStyle.shortCondition(code: current.weatherCode))",
+                              systemImage: WeatherStyle.symbol(code: current.weatherCode, isDay: current.isDay == 1))
+                            .font(.subheadline).foregroundStyle(Theme.dim)
+                    }
+                }.padding(.bottom, 16)
+            }
+        }
+        .fullScreenCover(isPresented: $showNight) { NightClockView(location: location) }
+        .onAppear { if nightAuto && nightTime { showNight = true } }
+        .onChange(of: nightTime) { if nightAuto { showNight = $0 } }
+    }
+
+    private var localDate: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "fr_FR")
+        formatter.timeZone = location.timeZone ?? .current
+        formatter.dateStyle = .full
+        return formatter.string(from: viewModel.now)
+    }
+
+    private var portraitClock: some View {
         VStack(spacing: 0) {
             header
             VStack(spacing: 0) {
@@ -18,9 +62,11 @@ struct BigClockScreen: View {
                 hairline
                 band(minuteText, unit: "min", weight: .light,
                      color: Theme.dim, size: 100, pad: true)
-                hairline
-                band(secondText, unit: "sec", weight: .bold,
-                     color: Theme.ink, size: 78, pad: true)
+                if showSeconds {
+                    hairline
+                    band(secondText, unit: "sec", weight: .bold,
+                         color: Theme.ink, size: 78, pad: true)
+                }
             }
             .padding(.top, 12)
 
@@ -61,7 +107,7 @@ struct BigClockScreen: View {
                       color: Color, size: CGFloat, pad: Bool) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 14) {
             Text(value)
-                .font(Theme.digit(size, weight))
+                .clockTypeface(size, weight: weight)
                 .tracking(2)
                 .monospacedDigit()
                 .foregroundStyle(color)

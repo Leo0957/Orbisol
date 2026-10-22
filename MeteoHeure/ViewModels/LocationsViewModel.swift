@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import UserNotifications
 import WidgetKit // rechargement du widget « Jour · Nuit » quand la liste change
 
 // MARK: - ViewModel principal
@@ -24,6 +25,20 @@ enum NextRain: Equatable {
     case soon(probability: Int, hour: Int)
 }
 
+enum WeatherDataStatus {
+    case loading, unavailable, current(Date), old(Date), offline(Date)
+
+    var label: String {
+        switch self {
+        case .loading: return "Chargement de la météo"
+        case .unavailable: return "Météo indisponible"
+        case .current(let date): return "Météo actualisée " + date.formatted(date: .omitted, time: .shortened)
+        case .old(let date): return "Météo ancienne · " + date.formatted(date: .omitted, time: .shortened)
+        case .offline(let date): return "Hors connexion · prévisions du " + date.formatted(date: .abbreviated, time: .shortened)
+        }
+    }
+}
+
 @MainActor
 final class LocationsViewModel: ObservableObject {
 
@@ -33,6 +48,7 @@ final class LocationsViewModel: ObservableObject {
     @Published private(set) var weatherByLocation: [UUID: OpenMeteoResponse] = [:]
     /// Qualité de l'air par lieu.
     @Published private(set) var airQualityByLocation: [UUID: AirQualityResponse] = [:]
+    private var airFetchedAt: [UUID: Date] = [:]
     @Published private(set) var loadingIDs: Set<UUID> = []
     @Published private(set) var errorMessage: String?
     /// Horodatage partagé, mis à jour toutes les secondes.
@@ -55,6 +71,19 @@ final class LocationsViewModel: ObservableObject {
     @Published private(set) var rainByLocation: [UUID: NextRain] = [:]
     /// Synchronisation iCloud des villes.
     @Published private(set) var cloudSyncEnabled: Bool
+    @Published private(set) var offlineIDs: Set<UUID> = []
+    @Published private(set) var cloudStatus = "État iCloud non vérifié"
+    @Published private(set) var notificationStatus = "Non vérifié"
+    @Published private(set) var pendingAlerts: [UNNotificationRequest] = []
+    @Published var alertPreferences = AlertPreferences()
+    @Published private(set) var alertProfiles: [AlertProfile] = []
+    @Published private(set) var activeAlertProfileID: UUID?
+    @Published private(set) var canUndoRemoval = false
+    private var removedLocations: [Location] = []
+    private var removedSelection: UUID?
+    private let snapshotStore = WeatherSnapshotStore()
+    private var alertTask: Task<Void, Never>?
+    private var refreshingAll = false
 
     private let service: WeatherService
     private let locationProvider = CurrentLocationProvider()
@@ -89,11 +118,28 @@ final class LocationsViewModel: ObservableObject {
         self.cloudSyncEnabled = defaults.object(forKey: Self.cloudSyncKey) as? Bool ?? true
         if let raw = defaults.string(forKey: Self.selectedKey) { self.selectedID = UUID(uuidString: raw) }
         loadLocations()
-        if locations.isEmpty {
+        if defaults.data(forKey: Self.storageKey) == nil {
             locations = Location.defaults   // premier lancement
             persist()
         }
+        if let startup = defaults.string(forKey: "Orbisol.startupCity"),
+           let id = UUID(uuidString: startup), locations.contains(where: { $0.id == id }) { selectedID = id }
         if selectedID == nil { selectedID = locations.first?.id }
+        if let data = defaults.data(forKey: "Orbisol.alertPreferences"),
+           let preferences = try? JSONDecoder().decode(AlertPreferences.self, from: data) {
+            alertPreferences = preferences
+        }
+        if let value = defaults.string(forKey: "Orbisol.alertProfiles") {
+            alertProfiles = (try? JSONDecoder().decode([AlertProfile].self, from: Data(value.utf8))) ?? []
+        }
+        activeAlertProfileID = defaults.string(forKey: "Orbisol.activeAlertProfile").flatMap(UUID.init(uuidString:))
+        for location in locations {
+            if let snapshot = snapshotStore.load(location.id) {
+                weatherByLocation[location.id] = snapshot.weather
+                lastFetch[location.id] = snapshot.fetchedAt
+                rainByLocation[location.id] = rainHint(for: location)
+            }
+        }
         syncWidgetList() // liste à jour dans le widget (même au premier lancement)
         // Partage le format horaire avec le widget (défaut : réglage de l'app).
         if UserDefaults(suiteName: Self.sharedGroupSuite)?.object(forKey: Self.formatKey) == nil {
@@ -110,8 +156,8 @@ final class LocationsViewModel: ObservableObject {
         }
 
         startClock()
-        // Rafraîchit la météo de toutes les villes au démarrage.
-        Task { await refreshAllWeather() }
+        // Un réveil iOS en arrière-plan passe par refreshBackgroundWeather().
+        // L'actualisation complète est lancée par handleScenePhase(.active).
     }
 
     deinit {
@@ -126,9 +172,10 @@ final class LocationsViewModel: ObservableObject {
         switch phase {
         case .active:
             startClock()
+            refreshCloudStatus()
+            Task { await refreshNotificationStatus() }
             // Une donnée plus vieille que 5 min force un rafraîchissement.
-            if let oldest = locations.compactMap({ lastFetch[$0.id] }).min(),
-               Date().timeIntervalSince(oldest) > 5 * 60 {
+            if locations.contains(where: { lastFetch[$0.id] == nil || Date().timeIntervalSince(lastFetch[$0.id]!) > 5 * 60 }) {
                 Task { await refreshAllWeather() }
             }
         case .background, .inactive:
@@ -158,6 +205,7 @@ final class LocationsViewModel: ObservableObject {
     /// La fraîcheur du cache (10 min) évite de marteler l'API à chaque
     /// apparition de vue ; `force: true` outre-passe le cache.
     func refreshWeather(for location: Location, force: Bool = false) async {
+        guard !loadingIDs.contains(location.id) else { return }
         if !force,
            let last = lastFetch[location.id],
            Date().timeIntervalSince(last) < 10 * 60 {
@@ -166,41 +214,57 @@ final class LocationsViewModel: ObservableObject {
         loadingIDs.insert(location.id)
         defer { loadingIDs.remove(location.id) }
 
+        async let air = try? service.fetchAirQuality(latitude: location.latitude, longitude: location.longitude)
         do {
-            // Météo et qualité de l'air en parallèle, puis programmation des alertes pluie.
-            async let weather = service.fetchWeather(for: location)
-            async let air = service.fetchAirQuality(latitude: location.latitude, longitude: location.longitude)
-            let (weatherResult, airResult) = try await (weather, air)
+            let weatherResult = try await service.fetchWeather(for: location)
+            guard locations.contains(where: { $0.id == location.id }) else { return }
             weatherByLocation[location.id] = weatherResult
-            airQualityByLocation[location.id] = airResult
             lastFetch[location.id] = Date()
+            offlineIDs.remove(location.id)
             rainByLocation[location.id] = rainHint(for: location)
-            if rainAlertsEnabled {
-                await rainNotifier.schedule(cities: locations, weatherBy: weatherByLocation,
-                                            threshold: rainThreshold, leadMinutes: rainLeadMinutes)
+            do {
+                try snapshotStore.save(WeatherSnapshot(locationID: location.id, fetchedAt: lastFetch[location.id]!, weather: weatherResult))
+            } catch {
+                errorMessage = "La météo est chargée, mais sa sauvegarde hors connexion a échoué."
             }
+            shareWeatherSnapshots()
         } catch {
-            // Une erreur d'air qualité seule ne doit pas casser la météo :
-            // on retente proprement par endpoint en cas d'échec groupé.
+            offlineIDs.insert(location.id)
             if weatherByLocation[location.id] == nil {
-                do {
-                    weatherByLocation[location.id] = try await service.fetchWeather(for: location)
-                    lastFetch[location.id] = Date()
-                    rainByLocation[location.id] = rainHint(for: location)
-                } catch {
-                    errorMessage = "Impossible de charger la météo pour \(location.name)."
-                }
+                errorMessage = "Impossible de charger la météo pour \(location.name)."
             }
         }
+        let result = await air
+        if locations.contains(where: { $0.id == location.id }) {
+            airQualityByLocation[location.id] = result
+            if result != nil { airFetchedAt[location.id] = Date() }
+        }
+        if !refreshingAll { rescheduleRainAlerts() }
     }
 
     /// Rafraîchit toutes les villes en parallèle (TaskGroup).
     func refreshAllWeather() async {
+        guard !refreshingAll else { return }
+        refreshingAll = true
         let targets = locations
         await withTaskGroup(of: Void.self) { group in
             for location in targets {
                 group.addTask { await self.refreshWeather(for: location, force: true) }
             }
+        }
+        refreshingAll = false
+        rescheduleRainAlerts()
+    }
+
+    /// iOS choisit la date effective du réveil. On borne le travail pour
+    /// pouvoir rendre la main rapidement au système.
+    func refreshBackgroundWeather() async {
+        let ordered = locations.filter { $0.id == selectedID } +
+            locations.filter { $0.favorite == true && $0.id != selectedID } +
+            locations.filter { $0.id != selectedID && $0.favorite != true }
+        for location in ordered.prefix(4) {
+            if Task.isCancelled { break }
+            await refreshWeather(for: location, force: true)
         }
     }
 
@@ -231,11 +295,13 @@ final class LocationsViewModel: ObservableObject {
         // Le widget affiche l'heure dans le même format (12 h / 24 h).
         UserDefaults(suiteName: Self.sharedGroupSuite)?.set(value, forKey: Self.formatKey)
         WidgetCenter.shared.reloadTimelines(ofKind: "DayNightWidget")
+        WidgetCenter.shared.reloadTimelines(ofKind: "OrbisolWeather")
     }
 
     func setUnitFahrenheit(_ value: Bool) {
         unitFahrenheit = value
         UserDefaults.standard.set(value, forKey: Self.unitKey)
+        shareWeatherSnapshots()
         // Re-rendu immédiat des températures (les vues lisent unitFahrenheit).
         objectWillChange.send()
     }
@@ -308,8 +374,7 @@ final class LocationsViewModel: ObservableObject {
                 if granted {
                     rainAlertsEnabled = true
                     UserDefaults.standard.set(true, forKey: Self.rainAlertsKey)
-                    await rainNotifier.schedule(cities: locations, weatherBy: weatherByLocation,
-                                                threshold: rainThreshold, leadMinutes: rainLeadMinutes)
+                    rescheduleRainAlerts()
                 } else {
                     errorMessage = "Notifications refusées. Activez-les dans Réglages > Notifications."
                 }
@@ -317,7 +382,7 @@ final class LocationsViewModel: ObservableObject {
         } else {
             rainAlertsEnabled = false
             UserDefaults.standard.set(false, forKey: Self.rainAlertsKey)
-            Task { await rainNotifier.cancelAll() }
+            rescheduleRainAlerts()
         }
     }
 
@@ -338,11 +403,106 @@ final class LocationsViewModel: ObservableObject {
     }
 
     private func rescheduleRainAlerts() {
-        guard rainAlertsEnabled else { return }
-        Task {
-            await rainNotifier.schedule(cities: locations, weatherBy: weatherByLocation,
-                                        threshold: rainThreshold, leadMinutes: rainLeadMinutes)
+        alertTask?.cancel()
+        alertTask = Task {
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            guard !Task.isCancelled else { return }
+            let fresh = weatherByLocation.filter { Date().timeIntervalSince(lastFetch[$0.key] ?? .distantPast) < 3600 }
+            let freshAir = airQualityByLocation.filter { Date().timeIntervalSince(airFetchedAt[$0.key] ?? .distantPast) < 3600 }
+            await rainNotifier.schedule(cities: locations, weatherBy: fresh,
+                                        airBy: freshAir,
+                                        threshold: rainThreshold, leadMinutes: rainLeadMinutes,
+                                        rainEnabled: rainAlertsEnabled, preferences: alertPreferences)
+            await refreshNotificationStatus()
         }
+    }
+
+    func saveAlertPreferences() {
+        if let data = try? JSONEncoder().encode(alertPreferences) {
+            UserDefaults.standard.set(data, forKey: "Orbisol.alertPreferences")
+        }
+        if let id = activeAlertProfileID,
+           alertProfiles.first(where: { $0.id == id })?.preferences != alertPreferences {
+            activeAlertProfileID = nil
+            UserDefaults.standard.removeObject(forKey: "Orbisol.activeAlertProfile")
+        }
+        rescheduleRainAlerts()
+    }
+
+    func saveCurrentAlertProfile(named rawName: String) {
+        let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, name.count <= 60, alertProfiles.count < 20 else { return }
+        let profile = AlertProfile(name: name, preferences: alertPreferences, rainEnabled: rainAlertsEnabled,
+                                   rainThreshold: rainThreshold, rainLeadMinutes: rainLeadMinutes)
+        alertProfiles.append(profile)
+        persistAlertProfiles()
+        activeAlertProfileID = profile.id
+        UserDefaults.standard.set(profile.id.uuidString, forKey: "Orbisol.activeAlertProfile")
+    }
+
+    func activateAlertProfile(_ id: UUID) {
+        guard let profile = alertProfiles.first(where: { $0.id == id }) else { return }
+        alertPreferences = profile.preferences
+        if let data = try? JSONEncoder().encode(alertPreferences) { UserDefaults.standard.set(data, forKey: "Orbisol.alertPreferences") }
+        setRainThreshold(profile.rainThreshold)
+        setRainLeadMinutes(profile.rainLeadMinutes)
+        setRainAlerts(profile.rainEnabled)
+        activeAlertProfileID = id
+        UserDefaults.standard.set(id.uuidString, forKey: "Orbisol.activeAlertProfile")
+        rescheduleRainAlerts()
+    }
+
+    func deleteAlertProfiles(at offsets: IndexSet) {
+        for index in offsets.sorted(by: >) {
+            if alertProfiles[index].id == activeAlertProfileID { activeAlertProfileID = nil }
+            alertProfiles.remove(at: index)
+        }
+        persistAlertProfiles()
+    }
+
+    private func persistAlertProfiles() {
+        if let data = try? JSONEncoder().encode(alertProfiles), let value = String(data: data, encoding: .utf8) {
+            UserDefaults.standard.set(value, forKey: "Orbisol.alertProfiles")
+        }
+    }
+
+    func reloadAlertProfiles() {
+        let raw = UserDefaults.standard.string(forKey: "Orbisol.alertProfiles") ?? "[]"
+        alertProfiles = (try? JSONDecoder().decode([AlertProfile].self, from: Data(raw.utf8))) ?? []
+        if !alertProfiles.contains(where: { $0.id == activeAlertProfileID }) { activeAlertProfileID = nil }
+    }
+
+    func authorizeNotifications() async {
+        _ = await rainNotifier.requestAuthorization()
+        rescheduleRainAlerts()
+        await refreshNotificationStatus()
+    }
+
+    func scheduleOffsetReminder(city: Location, meeting: Date, delta: Int) async -> Bool {
+        let scheduled = await rainNotifier.scheduleOffsetReminder(city: city, meeting: meeting, delta: delta)
+        await refreshNotificationStatus()
+        return scheduled
+    }
+
+    func refreshNotificationStatus() async {
+        let center = UNUserNotificationCenter.current()
+        let status = await center.notificationSettings().authorizationStatus
+        switch status {
+        case .authorized: notificationStatus = "Autorisées"
+        case .provisional, .ephemeral: notificationStatus = "Autorisées discrètement"
+        case .denied: notificationStatus = "Refusées dans les réglages iOS"
+        default: notificationStatus = "Autorisation à demander"
+        }
+        let requests = await center.pendingNotificationRequests()
+        let owned = requests.filter {
+            $0.identifier.hasPrefix("orbisol-alert-") || $0.identifier.hasPrefix("orbisol-env-") ||
+                $0.identifier.hasPrefix("orbisol-dst-") || $0.identifier.hasPrefix("rain-")
+        }
+        pendingAlerts = owned.sorted(by: { first, second in
+            let firstDate = first.plannedDate ?? Date.distantFuture
+            let secondDate = second.plannedDate ?? Date.distantFuture
+            return firstDate < secondDate
+        })
     }
 
     /// Résumé « pluie » de la ville, affiché dans les réglages
@@ -376,16 +536,18 @@ final class LocationsViewModel: ObservableObject {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
 
+        var hasProbability = false
         for index in hourly.time.indices {
             guard let date = parser.date(from: hourly.time[index]) else { continue }
             let interval = date.timeIntervalSince(now)
             guard interval > -900, interval < 24 * 3600 else { continue }
-            let probability = probabilities.indices.contains(index) ? probabilities[index] : 0
+            guard probabilities.indices.contains(index), let probability = probabilities[index] else { continue }
+            hasProbability = true
             if probability >= Self.rainHintThreshold {
                 return .soon(probability: probability, hour: calendar.component(.hour, from: date))
             }
         }
-        return .none
+        return hasProbability ? .none : .unknown
     }
 
     private static let rainHintThreshold = 30
@@ -406,15 +568,35 @@ final class LocationsViewModel: ObservableObject {
         return "mis à jour il y a \(minutes / 60) h"
     }
 
+    func dataStatus(for location: Location, at date: Date = Date()) -> WeatherDataStatus {
+        guard let fetched = lastFetch[location.id] else {
+            return loadingIDs.contains(location.id) ? .loading : .unavailable
+        }
+        if offlineIDs.contains(location.id) { return .offline(fetched) }
+        return date.timeIntervalSince(fetched) > 30 * 60 ? .old(fetched) : .current(fetched)
+    }
+
     // MARK: - Synchronisation iCloud
 
     func setCloudSync(_ enabled: Bool) {
         cloudSyncEnabled = enabled
         UserDefaults.standard.set(enabled, forKey: Self.cloudSyncKey)
         if enabled {
-            pushToCloud()
             applyCloudChanges()
+            pushToCloud()
         }
+        refreshCloudStatus()
+    }
+
+    func refreshCloudStatus() {
+        guard cloudSyncEnabled else { cloudStatus = "Désactivée"; return }
+        guard FileManager.default.ubiquityIdentityToken != nil else {
+            cloudStatus = "iCloud indisponible : compte ou capacité à vérifier"
+            return
+        }
+        if let date = UserDefaults.standard.object(forKey: "Orbisol.lastCloudReceipt") as? Date {
+            cloudStatus = "Dernière réception : " + date.formatted(date: .abbreviated, time: .shortened)
+        } else { cloudStatus = "En attente d’un échange iCloud" }
     }
 
     private func pushToCloud() {
@@ -427,8 +609,9 @@ final class LocationsViewModel: ObservableObject {
     private func applyCloudChanges() {
         guard cloudSyncEnabled,
               let data = NSUbiquitousKeyValueStore.default.data(forKey: Self.icloudStoreKey),
-              let cloudLocations = try? JSONDecoder().decode([Location].self, from: data),
-              !cloudLocations.isEmpty else { return }
+              let cloudLocations = try? JSONDecoder().decode([Location].self, from: data) else { return }
+        UserDefaults.standard.set(Date(), forKey: "Orbisol.lastCloudReceipt")
+        refreshCloudStatus()
         let localIDs = Set(locations.map(\.id))
         let cloudIDs = Set(cloudLocations.map(\.id))
         // On garde l'ordre du nuage, en conservant les lieux uniquement locaux.
@@ -436,7 +619,7 @@ final class LocationsViewModel: ObservableObject {
         for location in locations where !cloudIDs.contains(location.id) {
             merged.append(location)
         }
-        guard merged.map(\.id) != locations.map(\.id) || !localIDs.isSubset(of: cloudIDs) else { return }
+        guard merged != locations || !localIDs.isSubset(of: cloudIDs) else { return }
         locations = merged
         persist()
         Task { await refreshAllWeather() }
@@ -445,31 +628,32 @@ final class LocationsViewModel: ObservableObject {
     // MARK: - Recherche
 
     /// Délègue la recherche au service de géocodage.
-    func searchLocations(query: String) async -> [Location] {
+    func searchLocations(query: String) async throws -> [Location] {
         guard query.trimmingCharacters(in: .whitespaces).count >= 2 else { return [] }
-        do {
-            return try await service.searchLocations(query: query)
-        } catch {
-            errorMessage = error.localizedDescription
-            return []
-        }
+        return try await service.searchLocations(query: query)
     }
 
     // MARK: - Gestion de la liste
 
+    /// Une proximité de plusieurs kilomètres ne suffit pas : deux villages
+    /// voisins doivent pouvoir être suivis séparément.
+    func savedMatch(for location: Location) -> Location? {
+        locations.first { $0.isSamePlace(as: location) }
+    }
+
     /// Ajoute un lieu puis le sélectionne (après une recherche).
     func addAndSelect(_ location: Location) {
+        if let existing = savedMatch(for: location) {
+            select(existing.id)
+            return
+        }
         add(location)
         select(location.id)
     }
 
-    /// Ajoute un lieu (avec déduplication par coordonnées approchées).
+    /// Ajoute un lieu sans fusionner deux localités voisines.
     func add(_ location: Location) {
-        let exists = locations.contains {
-            abs($0.latitude - location.latitude) < 0.02 &&
-            abs($0.longitude - location.longitude) < 0.02
-        }
-        guard !exists else { return }
+        guard savedMatch(for: location) == nil else { return }
         locations.append(location)
         persist()
         Task { await refreshWeather(for: location) }
@@ -496,6 +680,7 @@ final class LocationsViewModel: ObservableObject {
 
     /// Suppression via « swipe to delete » (ForEach.onDelete).
     func remove(at offsets: IndexSet) {
+        rememberRemoval()
         for index in offsets {
             let id = locations[index].id
             weatherByLocation.removeValue(forKey: id)
@@ -503,27 +688,86 @@ final class LocationsViewModel: ObservableObject {
             lastFetch.removeValue(forKey: id)
         }
         locations.remove(atOffsets: offsets)
+        if !locations.contains(where: { $0.id == selectedID }) { select(locations.first?.id) }
         persist()
+        rescheduleRainAlerts()
     }
 
     /// Suppression par identifiant (ex. bouton dans le détail).
     func remove(_ location: Location) {
+        rememberRemoval()
         locations.removeAll { $0.id == location.id }
         weatherByLocation.removeValue(forKey: location.id)
         rainByLocation.removeValue(forKey: location.id)
         lastFetch.removeValue(forKey: location.id)
         if selectedID == location.id { select(locations.first?.id) }
         persist()
+        rescheduleRainAlerts()
     }
 
     /// Supprime toutes les villes.
     func removeAll() {
+        rememberRemoval()
         locations = []
         weatherByLocation = [:]
         rainByLocation = [:]
         lastFetch = [:]
-        selectedID = nil
+        select(nil)
         persist()
+        rescheduleRainAlerts()
+    }
+
+    private func rememberRemoval() {
+        removedLocations = locations
+        removedSelection = selectedID
+        canUndoRemoval = !locations.isEmpty
+    }
+
+    func undoRemoval() {
+        guard canUndoRemoval else { return }
+        let current = locations.filter { city in !removedLocations.contains(where: { $0.id == city.id }) }
+        locations = removedLocations + current
+        select(removedSelection)
+        canUndoRemoval = false
+        persist()
+        Task { await refreshAllWeather() }
+    }
+
+    func setGroup(_ group: String?, for location: Location) {
+        guard let index = locations.firstIndex(where: { $0.id == location.id }) else { return }
+        locations[index].group = group?.trimmingCharacters(in: .whitespacesAndNewlines)
+        persist()
+    }
+
+    func toggleFavorite(_ location: Location) {
+        guard let index = locations.firstIndex(where: { $0.id == location.id }) else { return }
+        locations[index].favorite = locations[index].favorite != true
+        persist()
+    }
+
+    func importCities(_ incoming: [Location]) {
+        for city in incoming where !locations.contains(where: { $0.id == city.id }) {
+            locations.append(city)
+        }
+        persist()
+        Task { await refreshAllWeather() }
+    }
+
+    private func shareWeatherSnapshots() {
+        let values = locations.compactMap { location -> CityWeatherSnapshot? in
+            guard let current = weatherByLocation[location.id]?.current, let fetched = lastFetch[location.id] else { return nil }
+            let next = WeatherInsights.hours(weatherByLocation[location.id], zone: location.timeZone ?? .current)
+                .first { $0.date > Date() && ($0.rain ?? 0) >= rainThreshold }
+            return CityWeatherSnapshot(id: location.id.uuidString, temperature: tempText(current.temperature2m, for: location),
+                condition: WeatherStyle.shortCondition(code: current.weatherCode), rain: nextRainText(for: location),
+                fetchedAt: fetched, sunset: weatherByLocation[location.id]?.daily?.sunset?.first,
+                nextRainAt: next?.date, rainProbability: next?.rain)
+        }
+        if let data = try? JSONEncoder().encode(values) {
+            UserDefaults(suiteName: Self.sharedGroupSuite)?.set(data, forKey: "Orbisol.widgetWeather")
+            WidgetCenter.shared.reloadTimelines(ofKind: "OrbisolWeather")
+            WidgetCenter.shared.reloadTimelines(ofKind: "OrbisolRain")
+        }
     }
 
     /// Réordonnancement via EditButton (ForEach.onMove).
@@ -539,6 +783,7 @@ final class LocationsViewModel: ObservableObject {
         UserDefaults.standard.set(data, forKey: Self.storageKey)
         pushToCloud()
         syncWidgetList()
+        shareWeatherSnapshots()
     }
 
     /// Partage la liste des villes avec le widget (App Group) et demande son rafraîchissement.

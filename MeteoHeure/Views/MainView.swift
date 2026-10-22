@@ -11,10 +11,23 @@ import SwiftUI
 
 struct MainView: View {
     @EnvironmentObject private var viewModel: LocationsViewModel
+    @AppStorage(ClockTypeface.storageKey) private var clockTypeface = ClockTypeface.orbitron.rawValue
+    @AppStorage("Orbisol.appearance") private var appearance = "system"
+    @State private var confirmDelete = false
+    @State private var sharedMeetingDate: Date?
+    @State private var sharedMeetingCities: Set<UUID>?
 
     enum Screen { case clocks, weather, big, settings }
 
     @State private var screen: Screen = MainView.initialScreen
+    @State private var settingsPath: [String] = {
+        #if DEBUG
+        let route = ProcessInfo.processInfo.environment["MH_TAB"] ?? ""
+        return ["fonts", "appearance", "alerts", "cities", "planner", "trips", "weatherLayout", "backup", "radar"].contains(route) ? [route] : []
+        #else
+        return []
+        #endif
+    }()
 
     /// Onglet de départ ; en debug, `MH_TAB` (simctl launch) force un écran
     /// pour capturer facilement les quatre onglets.
@@ -23,7 +36,7 @@ struct MainView: View {
         switch ProcessInfo.processInfo.environment["MH_TAB"] {
         case "weather": return .weather
         case "big": return .big
-        case "settings": return .settings
+        case "settings", "fonts", "appearance", "alerts", "cities", "planner", "trips", "weatherLayout", "backup", "radar": return .settings
         default: return .clocks
         }
         #else
@@ -42,19 +55,48 @@ struct MainView: View {
                 legacyTabLayout
             }
         }
+        .preferredColorScheme(appearance == "dark" ? .dark : appearance == "light" ? .light : nil)
+        .confirmationDialog("Supprimer toutes les villes ?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Tout supprimer", role: .destructive) { viewModel.removeAll() }
+            Button("Annuler", role: .cancel) {}
+        }
+        .onOpenURL { url in
+            if url.scheme == "orbisol", url.host == "meeting" {
+                let parts = URLComponents(url: url, resolvingAgainstBaseURL: false)
+                let fields = parts?.queryItems ?? []
+                guard let raw = fields.first(where: { $0.name == "at" })?.value,
+                      let seconds = Double(raw), seconds.isFinite,
+                      abs(Date().timeIntervalSince1970 - seconds) < 3 * 365 * 86400 else { return }
+                let ids = Set(fields.filter { $0.name == "city" }.compactMap { $0.value.flatMap(UUID.init(uuidString:)) })
+                guard !ids.isEmpty, ids.count <= 12 else { return }
+                let saved = Set(viewModel.locations.map(\.id))
+                guard ids.isSubset(of: saved) else { return }
+                sharedMeetingDate = Date(timeIntervalSince1970: seconds)
+                sharedMeetingCities = ids
+                settingsPath = ["planner"]
+                screen = .settings
+                return
+            }
+            guard url.scheme == "orbisol", let id = UUID(uuidString: url.lastPathComponent),
+                  viewModel.locations.contains(where: { $0.id == id }) else { return }
+            viewModel.select(id)
+            screen = url.host == "clock" ? .big : .weather
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("Orbisol.openCity"))) { _ in openRequestedCity() }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in openRequestedCity() }
         .onChange(of: viewModel.errorMessage) { message in
             if let message {
                 alertMessage = message
                 viewModel.clearError()
             }
         }
-        .alert("Météo · Heure", isPresented: alertPresented) {
+        .alert("Orbisol", isPresented: alertPresented) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(alertMessage ?? "")
         }
         .sheet(isPresented: $showAdd) {
-            AddLocationView()
+            AddLocationView(onAdded: { screen = .weather })
         }
         .sheet(item: $forecastLocation) { location in
             NavigationStack {
@@ -67,11 +109,21 @@ struct MainView: View {
             }
         }
         .onAppear {
+            openRequestedCity()
             // Sélectionne la première ville par défaut.
             if viewModel.selectedLocation == nil, let first = viewModel.locations.first {
                 viewModel.select(first.id)
             }
         }
+    }
+
+    private func openRequestedCity() {
+        let defaults = UserDefaults(suiteName: LocationsViewModel.sharedGroupSuite)
+        guard let raw = defaults?.string(forKey: "Orbisol.requestedCity"), let id = UUID(uuidString: raw),
+              viewModel.locations.contains(where: { $0.id == id }) else { return }
+        defaults?.removeObject(forKey: "Orbisol.requestedCity")
+        viewModel.select(id)
+        screen = .weather
     }
 
     @available(iOS 26.0, *)
@@ -161,12 +213,12 @@ struct MainView: View {
             ClocksListView(onSelect: { location in
                 viewModel.select(location.id)
                 withAnimation { self.screen = .big }
-            }, onAdd: { showAdd = true })
+            }, onAdd: { showAdd = true }, onShowWeather: { self.screen = .weather })
         case .weather:
             if let selected = viewModel.selectedLocation {
-                WeatherScreen(location: selected) {
-                    forecastLocation = selected
-                }
+                WeatherScreen(location: selected,
+                              onForecast: { forecastLocation = selected },
+                              onAddCity: { showAdd = true })
             } else {
                 emptyScreen("Aucune ville — ajoutez-en une depuis l'onglet Réglages.")
             }
@@ -177,7 +229,28 @@ struct MainView: View {
                 emptyScreen("Aucune ville — ajoutez-en une depuis l'onglet Réglages.")
             }
         case .settings:
-            settingsScreen
+            NavigationStack(path: $settingsPath) {
+                settingsScreen
+                    .navigationDestination(for: String.self) { destination in
+                        switch destination {
+                        case "appearance": AppearanceSettingsView()
+                        case "alerts": AlertCenterView()
+                        case "cities": CityOrganizerView()
+                        case "planner": WorldPlannerView(initialDate: sharedMeetingDate, initialCities: sharedMeetingCities)
+                        case "trips": TripsView()
+                        case "weatherLayout": WeatherLayoutSettings()
+                        case "backup": BackupSettingsView()
+                        case "radar":
+                            if let city = viewModel.selectedLocation { RadarView(location: city) }
+                        default: ClockTypefaceSettings()
+                        }
+                    }
+                    .navigationTitle("Réglages")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbarBackground(Theme.paper, for: .navigationBar)
+                    .toolbarBackground(.visible, for: .navigationBar)
+            }
+            .tint(Theme.ink)
         }
     }
 
@@ -204,11 +277,47 @@ struct MainView: View {
             VStack(spacing: 0) {
                 ScreenHeader(eyebrow: "Réglages",
                              title: "Préférences",
-                             subtitle: "Unités, alertes pluie et synchronisation")
+                             subtitle: "Polices, unités, alertes et synchronisation")
                     .padding(.top, 14)
                     .padding(.bottom, 8)
 
                 VStack(spacing: 0) {
+                    NavigationLink(value: "trips") { Label("Voyages datés", systemImage: "suitcase").frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 14) }
+                    Hairline()
+                    NavigationLink(value: "weatherLayout") { Label("Sections météo", systemImage: "slider.horizontal.3").frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 14) }
+                    Hairline()
+                    NavigationLink(value: "backup") { Label("Sauvegarde", systemImage: "externaldrive").frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 14) }
+                    Hairline()
+                    NavigationLink(value: "appearance") { Label("Apparence & horloge", systemImage: "circle.lefthalf.filled").frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 14) }
+                    Hairline()
+                    NavigationLink(value: "alerts") { Label("Centre des alertes", systemImage: "bell").frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 14) }
+                    Hairline()
+                    NavigationLink(value: "cities") { Label("Villes & voyages", systemImage: "list.bullet").frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 14) }
+                    Hairline()
+                    NavigationLink(value: "planner") { Label("Comparer les heures", systemImage: "globe").frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 14) }
+                    Hairline()
+                    NavigationLink(value: "fonts") {
+                        HStack(spacing: 12) {
+                            Image(systemName: "textformat")
+                                .font(.system(size: 15, weight: .semibold))
+                                .frame(width: 34, height: 34)
+                                .background(Theme.peach, in: Circle())
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Police d’écriture").font(.system(size: 16, weight: .semibold))
+                                Text((ClockTypeface(rawValue: clockTypeface) ?? .orbitron).title)
+                                    .font(.caption).foregroundStyle(Theme.dim)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Theme.faint)
+                        }
+                        .foregroundStyle(Theme.ink)
+                        .padding(.vertical, 12)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    Hairline()
                     actionRow("Ajouter une ville", icon: "plus") { showAdd = true }
                     Hairline()
                     actionRow("Ma position", icon: "scope") {
@@ -223,6 +332,7 @@ struct MainView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 24)
         }
+        .background(Theme.paper)
     }
 
     private func actionRow(_ title: String, icon: String,
@@ -305,14 +415,19 @@ struct MainView: View {
                     .labelsHidden()
                     .tint(Theme.accent)
             }
+            Text(viewModel.cloudStatus).font(.caption).foregroundStyle(Theme.dim).padding(.vertical, 8)
             Hairline()
             HStack(spacing: 12) {
                 settingLabel("VILLES")
                 Spacer()
-                Button("Tout effacer", role: .destructive) { viewModel.removeAll() }
+                Button("Tout effacer", role: .destructive) { confirmDelete = true }
                     .font(.system(size: 12.5, weight: .semibold))
             }
             .padding(.vertical, 11)
+            if viewModel.canUndoRemoval {
+                Button { viewModel.undoRemoval() } label: { Label("Annuler la suppression", systemImage: "arrow.uturn.backward") }
+                    .padding(.vertical, 12)
+            }
         }
     }
 

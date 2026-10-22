@@ -53,6 +53,46 @@ struct WeatherService {
         self.session = session
     }
 
+    struct HistoricalDay: Decodable {
+        let daily: Daily
+        struct Daily: Decodable {
+            let time: [String]
+            let temperature2mMax: [Double?]
+            let temperature2mMin: [Double?]
+            let precipitationSum: [Double?]
+            enum CodingKeys: String, CodingKey {
+                case time
+                case temperature2mMax = "temperature_2m_max"
+                case temperature2mMin = "temperature_2m_min"
+                case precipitationSum = "precipitation_sum"
+            }
+        }
+    }
+
+    /// Archive de réanalyse Open-Meteo, distincte des prévisions.
+    func fetchHistoricalDay(for location: Location, on date: Date) async throws -> HistoricalDay {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = location.timeZone ?? .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        var components = URLComponents(string: "https://archive-api.open-meteo.com/v1/archive")!
+        components.queryItems = [
+            URLQueryItem(name: "latitude", value: String(location.latitude)),
+            URLQueryItem(name: "longitude", value: String(location.longitude)),
+            URLQueryItem(name: "start_date", value: formatter.string(from: date)),
+            URLQueryItem(name: "end_date", value: formatter.string(from: date)),
+            URLQueryItem(name: "daily", value: "temperature_2m_max,temperature_2m_min,precipitation_sum"),
+            URLQueryItem(name: "timezone", value: location.timeZoneIdentifier)
+        ]
+        guard let url = components.url else { throw WeatherServiceError.invalidURL }
+        let (data, response) = try await session.data(from: url)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw WeatherServiceError.invalidResponse
+        }
+        do { return try JSONDecoder().decode(HistoricalDay.self, from: data) }
+        catch { throw WeatherServiceError.decoding(error) }
+    }
+
     // MARK: - Météo courante + horaires + 7 jours (Open-Meteo)
 
     /// Récupère la météo complète d'une localisation.
@@ -64,7 +104,10 @@ struct WeatherService {
             URLQueryItem(name: "latitude",  value: String(location.latitude)),
             URLQueryItem(name: "longitude", value: String(location.longitude)),
             URLQueryItem(name: "current",   value: "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,surface_pressure,wind_speed_10m,wind_direction_10m"),
-            URLQueryItem(name: "hourly",    value: "temperature_2m,weather_code,precipitation_probability,apparent_temperature,uv_index"),
+            URLQueryItem(name: "hourly",    value: "temperature_2m,weather_code,precipitation_probability,apparent_temperature,uv_index,wind_speed_10m,precipitation"),
+            URLQueryItem(name: "past_hours", value: "24"),
+            URLQueryItem(name: "minutely_15", value: "precipitation"),
+            URLQueryItem(name: "forecast_minutely_15", value: "12"),
             URLQueryItem(name: "daily",     value: "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max"),
             URLQueryItem(name: "timezone",  value: "auto"), // heures & lever/coucher locaux du lieu
             URLQueryItem(name: "forecast_days", value: "8")
@@ -93,11 +136,13 @@ struct WeatherService {
 
     /// Récupère l'indice de qualité de l'air (AQI européen + particules).
     func fetchAirQuality(latitude: Double, longitude: Double) async throws -> AirQualityResponse {
-        var components = URLComponents(string: "https://api.open-meteo.com/v1/air-quality")!
+        var components = URLComponents(string: "https://air-quality-api.open-meteo.com/v1/air-quality")!
         components.queryItems = [
             URLQueryItem(name: "latitude", value: String(latitude)),
             URLQueryItem(name: "longitude", value: String(longitude)),
             URLQueryItem(name: "current", value: "european_aqi,us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide"),
+            URLQueryItem(name: "hourly", value: "grass_pollen,birch_pollen,alder_pollen"),
+            URLQueryItem(name: "forecast_days", value: "1"),
             URLQueryItem(name: "timezone", value: "auto")
         ]
         guard let url = components.url else { throw WeatherServiceError.invalidURL }
@@ -135,14 +180,15 @@ struct WeatherService {
 
     // MARK: - Recherche de lieux (géocodage Open-Meteo)
 
-    /// Recherche des localisations par nom (ville, pays, état/région…).
+    /// Recherche des localisations par nom ou code postal. Open-Meteo accepte
+    /// aussi « ville, pays » pour désambiguïser les petites localités.
     /// - Parameter query: texte saisi par l'utilisateur.
     /// - Returns: liste de `Location` candidates.
     func searchLocations(query: String) async throws -> [Location] {
         var components = URLComponents(string: "https://geocoding-api.open-meteo.com/v1/search")!
         components.queryItems = [
             URLQueryItem(name: "name",     value: query),
-            URLQueryItem(name: "count",    value: "12"),
+            URLQueryItem(name: "count",    value: "100"),
             URLQueryItem(name: "language", value: "fr"),
             URLQueryItem(name: "format",   value: "json")
         ]
@@ -160,6 +206,7 @@ struct WeatherService {
                 let longitude: Double
                 let country: String?
                 let admin1: String?   // région / état / province
+                let admin2: String?   // département / district
                 let timezone: String? // IANA, ex. "Africa/Abidjan"
             }
             let results: [Result]?
@@ -167,16 +214,18 @@ struct WeatherService {
 
         do {
             let decoded = try JSONDecoder().decode(SearchResponse.self, from: data)
-            guard let results = decoded.results, !results.isEmpty else {
-                throw WeatherServiceError.noResults
-            }
-            return results.map { result in
-                Location(name: result.name,
-                         region: result.admin1,
+            return (decoded.results ?? []).compactMap { result in
+                guard let identifier = result.timezone,
+                      TimeZone(identifier: identifier) != nil else { return nil }
+                let region = [result.admin2, result.admin1]
+                    .compactMap { $0?.isEmpty == false ? $0 : nil }
+                    .joined(separator: ", ")
+                return Location(name: result.name,
+                         region: region.isEmpty ? nil : region,
                          country: result.country,
                          latitude: result.latitude,
                          longitude: result.longitude,
-                         timeZoneIdentifier: result.timezone ?? "UTC")
+                         timeZoneIdentifier: identifier)
             }
         } catch let error as WeatherServiceError {
             throw error

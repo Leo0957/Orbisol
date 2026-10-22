@@ -5,7 +5,15 @@ import WidgetKit
 @main
 struct MeteoHeureWidgetBundle: WidgetBundle {
     var body: some Widget {
-        DayNightWidget()
+        availableWidgets
+    }
+
+    private var availableWidgets: some Widget {
+        if #available(iOS 17.0, *) {
+            return WidgetBundleBuilder.buildBlock(ConfiguredDayNightWidget(), OrbisolWeatherWidget(), OrbisolRainWidget(), OrbisolMultiCityWidget())
+        } else {
+            return DayNightWidget()
+        }
     }
 }
 

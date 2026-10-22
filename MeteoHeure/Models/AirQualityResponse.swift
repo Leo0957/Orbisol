@@ -6,10 +6,24 @@ import SwiftUI
 // Endpoint : https://api.open-meteo.com/v1/air-quality
 // Indices : european_aqi (échelle européenne 0-100+), us_aqi, PM2.5, PM10, ozone…
 
-struct AirQualityResponse: Decodable {
+struct AirQualityResponse: Codable {
     let current: Current?
+    var hourly: Pollen?
 
-    struct Current: Decodable {
+    struct Pollen: Codable {
+        let time: [String]
+        let grassPollen: [Double?]?
+        let birchPollen: [Double?]?
+        let alderPollen: [Double?]?
+        enum CodingKeys: String, CodingKey {
+            case time
+            case grassPollen = "grass_pollen"
+            case birchPollen = "birch_pollen"
+            case alderPollen = "alder_pollen"
+        }
+    }
+
+    struct Current: Codable {
         /// Indice européen de qualité de l'air (0-20 très bonne → 100+ extrême).
         let europeanAqi: Int?
         /// Indice US (optionnel).

@@ -7,6 +7,17 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+        E101 = {isa = PBXBuildFile; fileRef = E102; };
+        E103 = {isa = PBXBuildFile; fileRef = E104; };
+        E105 = {isa = PBXBuildFile; fileRef = E106; };
+        E107 = {isa = PBXBuildFile; fileRef = E108; };
+        E109 = {isa = PBXBuildFile; fileRef = E110; };
+        E111 = {isa = PBXBuildFile; fileRef = E108; };
+        E201 = {isa = PBXBuildFile; fileRef = E202; };
+        E203 = {isa = PBXBuildFile; fileRef = E204; };
+        E205 = {isa = PBXBuildFile; fileRef = E206; };
+        G001 /* GlobeLand.swift in Sources */ = {isa = PBXBuildFile; fileRef = G002; };
+        F001 /* Fonts in Resources */ = {isa = PBXBuildFile; fileRef = F002 /* Fonts */; };
 		0021 /* WeatherApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0011 /* WeatherApp.swift */; };
 		0022 /* Location.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0012 /* Location.swift */; };
 		0023 /* WeatherResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0013 /* WeatherResponse.swift */; };
@@ -64,6 +75,16 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+        E102 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeteoHeure/Models/Planning.swift; sourceTree = SOURCE_ROOT; };
+        E104 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeteoHeure/Views/PlanningViews.swift; sourceTree = SOURCE_ROOT; };
+        E106 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeteoHeure/Views/PreferencesViews.swift; sourceTree = SOURCE_ROOT; };
+        E108 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/CityIntents.swift; sourceTree = SOURCE_ROOT; };
+        E110 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeteoHeureWidget/WeatherWidget.swift; sourceTree = SOURCE_ROOT; };
+        E202 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeteoHeure/Views/ProductFeatures.swift; sourceTree = SOURCE_ROOT; };
+        E204 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeteoHeure/Views/RadarView.swift; sourceTree = SOURCE_ROOT; };
+        E206 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeteoHeure/Models/ProductPlanning.swift; sourceTree = SOURCE_ROOT; };
+        G002 /* GlobeLand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeteoHeure/Views/GlobeLand.swift; sourceTree = SOURCE_ROOT; };
+        F002 /* Fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Fonts; sourceTree = "<group>"; };
 		0002 /* MeteoHeure.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MeteoHeure.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0011 /* WeatherApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherApp.swift; sourceTree = "<group>"; };
 		0012 /* Location.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Location.swift; sourceTree = "<group>"; };
@@ -166,6 +187,8 @@
 				0072 /* ClockFormat.swift */,
 				0073 /* ClocksListView.swift */,
 				0074 /* WeatherScreen.swift */,
+                G002 /* GlobeLand.swift */,
+                E102, E104, E106, E108, E110, E202, E204, E206,
 				0075 /* BigClockScreen.swift */,
 				007A /* TemperatureCurveView.swift */,
 			);
@@ -195,6 +218,7 @@
 			isa = PBXGroup;
 			children = (
 				00F6 /* Assets.xcassets */,
+                F002 /* Fonts */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -303,6 +327,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				00F7 /* Assets.xcassets in Resources */,
+                F001 /* Fonts in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -337,6 +362,8 @@
 				0082 /* ClockFormat.swift in Sources */,
 				0083 /* ClocksListView.swift in Sources */,
 				0084 /* WeatherScreen.swift in Sources */,
+                G001 /* GlobeLand.swift in Sources */,
+                E101, E103, E105, E107, E201, E203, E205,
 				0085 /* BigClockScreen.swift in Sources */,
 				0086 /* AirQualityResponse.swift in Sources */,
 				0087 /* CurrentLocationProvider.swift in Sources */,
@@ -353,6 +380,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				00B1 /* WidgetBundle.swift in Sources */,
+                E109, E111,
 				00B2 /* Timeline.swift in Sources */,
 				00B3 /* DayNightWidgetView.swift in Sources */,
 				00B4 /* WorldMap.swift in Sources */,
@@ -433,12 +461,13 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Météo · Heure";
+				INFOPLIST_KEY_CFBundleDisplayName = Orbisol;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Votre position sert à afficher la météo et l'heure de votre lieu actuel.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+                INFOPLIST_FILE = MeteoHeure/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -464,12 +493,13 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Météo · Heure";
+				INFOPLIST_KEY_CFBundleDisplayName = Orbisol;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Votre position sert à afficher la météo et l'heure de votre lieu actuel.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+                INFOPLIST_FILE = MeteoHeure/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

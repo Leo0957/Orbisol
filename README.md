@@ -1,4 +1,4 @@
-# Météo · Heure — application iPhone
+# Orbisol — application iPhone
 
 Application native **Swift / SwiftUI** (iOS 16+, iPhone) affichant la météo et
 l'heure locale pour plusieurs lieux : villes, pays, régions.
@@ -146,7 +146,7 @@ l'écran Météo), **rectangle** (carte pleine largeur + étiquette ville/heure)
 ### Ajouter le widget sur l'écran d'accueil
 
 1. Appui long sur l'écran d'accueil → **+** en haut à gauche → rechercher
-   « **Météo · Heure** » → choisir « **Jour · Nuit** » (petit, rectangle ou grand).
+   « **Orbisol** » → choisir « **Jour · Nuit** » (petit, rectangle ou grand).
 2. Les marqueurs suivent automatiquement les villes sauvegardées dans l'app
    (l'application écrit la liste dans l'App Group et demande le rechargement
    du widget à chaque modification). La ville **sélectionnée** dans l'app est

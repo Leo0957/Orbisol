@@ -7,33 +7,148 @@ import SwiftUI
 /// La carte « Ajouter une ville » ferme la liste.
 struct ClocksListView: View {
     @EnvironmentObject private var viewModel: LocationsViewModel
+    @AppStorage("Orbisol.homeFocus") private var homeFocus = "clocks"
+    @AppStorage("Orbisol.highLegibility") private var highLegibility = false
+    @ScaledMetric(relativeTo: .largeTitle) private var clockSize: CGFloat = 44
     let onSelect: (Location) -> Void
     let onAdd: () -> Void
+    let onShowWeather: () -> Void
+    @State private var showPlanner = false
+    @State private var showOrganizer = false
+    @State private var query = ""
+    @State private var worldwideResults: [Location] = []
+    @State private var worldwideError: String?
+    @State private var isSearchingWorldwide = false
+    @State private var worldwideTask: Task<Void, Never>?
+    @State private var preview: Location?
+    private var visibleCities: [Location] {
+        let matches = viewModel.locations.filter {
+            query.isEmpty || ($0.name + " " + $0.countrySubtitle + " " + ($0.group ?? "")).localizedStandardContains(query)
+        }
+        return matches.filter { $0.favorite == true } + matches.filter { $0.favorite != true }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            if viewModel.locations.isEmpty {
-                empty
-            } else {
-                ScrollView {
+            ScrollView {
                     VStack(spacing: 0) {
                         ScreenHeader(eyebrow: "Horloges",
                                      title: "Villes suivies",
                                      subtitle: "Fuseaux, météo rapide et pluie à venir")
                             .padding(.top, 18)
                             .padding(.bottom, 4)
+                        if homeFocus != "clocks", let city = viewModel.selectedLocation {
+                            homeCard(city)
+                                .padding(.vertical, 12)
+                        }
 
-                        ForEach(viewModel.locations) { location in
+                        HStack {
+                            Image(systemName: "magnifyingglass").foregroundStyle(Theme.dim)
+                            TextField("Rechercher une ville dans le monde", text: $query)
+                                .autocorrectionDisabled()
+                                .textInputAutocapitalization(.words)
+                            if !query.isEmpty {
+                                Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
+                                    .accessibilityLabel("Effacer la recherche")
+                            }
+                        }.padding(.vertical, 14)
+                        if !query.isEmpty {
+                            Text("Villes suivies").font(.headline).frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        if visibleCities.isEmpty && !query.isEmpty {
+                            Text("Aucune ville déjà suivie ne correspond.").font(.caption).foregroundStyle(Theme.dim)
+                                .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 6)
+                        }
+                        ForEach(visibleCities) { location in
                             row(location)
                             Hairline()
+                        }
+                        if !query.isEmpty {
+                            Text("Recherche mondiale")
+                                .font(.headline).frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, 15)
+                            if isSearchingWorldwide { ProgressView("Recherche de villes…").padding(.vertical) }
+                            else if let worldwideError {
+                                Text(worldwideError).font(.caption).foregroundStyle(Theme.dim)
+                                    .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical)
+                            } else if query.trimmingCharacters(in: .whitespacesAndNewlines).count < 2 {
+                                Text("Saisissez au moins deux caractères.").font(.caption).foregroundStyle(Theme.dim)
+                                    .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical)
+                            } else {
+                                ForEach(worldwideResults) { city in
+                                    Button { preview = city } label: {
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                Text(city.name).font(.subheadline.bold())
+                                                Text(city.subtitle).font(.caption).foregroundStyle(Theme.dim)
+                                            }
+                                            Spacer()
+                                            Image(systemName: "chevron.right")
+                                        }
+                                        .contentShape(Rectangle()).padding(.vertical, 9)
+                                    }
+                                    .buttonStyle(.plain)
+                                    Hairline()
+                                }
+                            }
+                            Text("Pour un village homonyme, précisez « village, pays » ou cherchez son code postal.")
+                                .font(.caption2).foregroundStyle(Theme.dim)
+                                .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 10)
+                        }
+                        HStack {
+                            Button { showPlanner = true } label: { Label("Comparer", systemImage: "globe") }
+                            Spacer()
+                            Button { showOrganizer = true } label: { Label("Organiser", systemImage: "list.bullet") }
+                        }.padding(.vertical, 16)
+                        if viewModel.canUndoRemoval {
+                            Button { viewModel.undoRemoval() } label: { Label("Annuler la suppression", systemImage: "arrow.uturn.backward") }
                         }
                         addCard
                             .padding(.top, 18)
                             .padding(.bottom, 4)
                     }
                     .padding(.horizontal, 20)
-                }
             }
+        }
+        .onChange(of: query) { scheduleWorldwideSearch($0) }
+        .onDisappear { worldwideTask?.cancel() }
+        .sheet(item: $preview) { location in
+            CitySearchPreview(location: location, isSaved: viewModel.savedMatch(for: location) != nil) {
+                viewModel.addAndSelect(location)
+                preview = nil
+                query = ""
+                onShowWeather()
+            }
+            .environmentObject(viewModel)
+        }
+        .sheet(isPresented: $showPlanner) {
+            NavigationStack { WorldPlannerView().toolbar { Button("Fermer") { showPlanner = false } } }
+        }
+        .sheet(isPresented: $showOrganizer) {
+            NavigationStack { CityOrganizerView().toolbar { Button("Fermer") { showOrganizer = false } } }
+        }
+    }
+
+    private func scheduleWorldwideSearch(_ text: String) {
+        worldwideTask?.cancel()
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        worldwideResults = []
+        worldwideError = nil
+        guard trimmed.count >= 2 else { isSearchingWorldwide = false; return }
+        isSearchingWorldwide = true
+        worldwideTask = Task {
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled else { return }
+            do {
+                let cities = try await viewModel.searchLocations(query: trimmed)
+                guard !Task.isCancelled else { return }
+                worldwideResults = cities
+                worldwideError = cities.isEmpty ? "Aucune localité trouvée. Essayez une autre orthographe ou le code postal." : nil
+            } catch {
+                guard !Task.isCancelled else { return }
+                worldwideError = "Recherche indisponible : \(error.localizedDescription)"
+            }
+            isSearchingWorldwide = false
         }
     }
 
@@ -51,7 +166,7 @@ struct ClocksListView: View {
                     .foregroundStyle(Theme.dim)
                 HStack(spacing: 7) {
                     Text(location.name.uppercased())
-                        .font(.system(size: 20, weight: .bold))
+                    .font(highLegibility ? .system(.title2, weight: .bold) : .system(size: 20, weight: .bold))
                         .tracking(0.6)
                         .foregroundStyle(Theme.ink)
                     if viewModel.isPrimary(location) {
@@ -60,20 +175,27 @@ struct ClocksListView: View {
                             .foregroundStyle(Theme.accent)
                             .accessibilityLabel("Ville principale")
                     }
+                    if location.favorite == true { Image(systemName: "pin.fill").font(.caption).foregroundStyle(Theme.accent) }
                 }
                 Text(location.countrySubtitle)
                     .font(.system(size: 12.5, weight: .regular))
                     .tracking(0.2)
                     .foregroundStyle(Theme.dim)
+                Text("\(WorldTime.offset(from: .current, to: location.timeZone ?? .current, at: viewModel.now)) · \(WorldTime.dayDifference(from: .current, to: location.timeZone ?? .current, at: viewModel.now))")
+                    .font(.caption2).foregroundStyle(Theme.dim)
                 if let current = viewModel.weatherByLocation[location.id]?.current {
                     weatherLine(current, location: location)
                         .padding(.top, 3)
                 }
+                Text(viewModel.dataStatus(for: location).label)
+                    .font(.caption2)
+                    .foregroundStyle(Theme.dim)
             }
             Spacer(minLength: 12)
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(t.text)
-                    .font(Theme.digit(44, .bold))
+                    .clockTypeface(highLegibility ? clockSize * 1.1 : clockSize, weight: .bold)
+                    .lineLimit(1).minimumScaleFactor(0.55)
                     .tracking(0.5)
                     .monospacedDigit()
                     .foregroundStyle(Theme.ink)
@@ -91,7 +213,13 @@ struct ClocksListView: View {
         .padding(.vertical, 13)
         .contentShape(Rectangle())
         .onTapGesture { onSelect(location) }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { onSelect(location) }
         .contextMenu {
+            Button { viewModel.toggleFavorite(location) } label: {
+                Label(location.favorite == true ? "Retirer des favoris" : "Épingler aux favoris", systemImage: "pin")
+            }
             if !viewModel.isPrimary(location) {
                 Button {
                     viewModel.makePrimary(location)
@@ -105,6 +233,34 @@ struct ClocksListView: View {
                 Label("Supprimer", systemImage: "trash")
             }
         }
+    }
+
+    private func homeCard(_ city: Location) -> some View {
+        let weather = viewModel.weatherByLocation[city.id]
+        let title: String
+        let value: String
+        switch homeFocus {
+        case "rain":
+            title = "PLUIE · \(city.name.uppercased())"
+            value = viewModel.nextRainText(for: city) ?? "Prévision de pluie indisponible"
+        case "air":
+            title = "AIR · \(city.name.uppercased())"
+            value = viewModel.airQualityByLocation[city.id]?.current?.europeanAqi.map { "AQI européen \($0)" } ?? "Qualité de l’air indisponible"
+        default:
+            title = "SORTIE · \(city.name.uppercased())"
+            let hours = WeatherInsights.hours(weather, zone: city.timeZone ?? .current)
+            let best = WeatherInsights.bestWindow(hours, after: Date(), zone: city.timeZone ?? .current)
+            value = best.first.map { "À partir de " + WorldTime.time($0.date, zone: city.timeZone ?? .current, hour12: viewModel.hour12) } ?? "Créneau indisponible"
+        }
+        return VStack(alignment: .leading, spacing: 5) {
+            Text(title).font(.caption.bold()).foregroundStyle(Theme.accent)
+            Text(value).font(highLegibility ? .title2.bold() : .headline).foregroundStyle(Theme.ink)
+            Text(viewModel.dataStatus(for: city).label).font(.caption).foregroundStyle(Theme.dim)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading).padding(16)
+        .background(Theme.paper.opacity(0.92), in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.line, lineWidth: highLegibility ? 2 : 1))
+        .accessibilityElement(children: .combine)
     }
 
     /// « 18° · ciel clair » — ou « 18° · pluie vers 11 am » si la pluie approche.
@@ -180,26 +336,4 @@ struct ClocksListView: View {
         .frame(height: 158)
     }
 
-    private var empty: some View {
-        VStack(spacing: 12) {
-            Spacer()
-            Image(systemName: "clock")
-                .font(.system(size: 40))
-                .foregroundStyle(Theme.dim)
-            Text("Aucune ville enregistrée")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(Theme.ink)
-            Button {
-                onAdd()
-            } label: {
-                Text("Ajouter une ville")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Theme.paper)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 10)
-                    .background(Theme.ink, in: Capsule())
-            }
-            Spacer()
-        }
-    }
 }
