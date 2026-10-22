@@ -21,6 +21,22 @@ struct ClocksListView: View {
     @State private var isSearchingWorldwide = false
     @State private var worldwideTask: Task<Void, Never>?
     @State private var preview: Location?
+    @State private var isLocating = false
+    @State private var locatedCity: Location?
+    @State private var showLocationProposal = false
+    @State private var showLocationError = false
+    @State private var locationError = ""
+    @State private var locationNotice: String?
+    private let searchSurface = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(white: 0.15, alpha: 1)
+            : UIColor(white: 0.91, alpha: 1)
+    })
+    private let locationSurface = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(white: 0.17, alpha: 1)
+            : UIColor(white: 0.98, alpha: 1)
+    })
     private var visibleCities: [Location] {
         let matches = viewModel.locations.filter {
             query.isEmpty || ($0.name + " " + $0.countrySubtitle + " " + ($0.group ?? "")).localizedStandardContains(query)
@@ -42,16 +58,55 @@ struct ClocksListView: View {
                                 .padding(.vertical, 12)
                         }
 
-                        HStack {
-                            Image(systemName: "magnifyingglass").foregroundStyle(Theme.dim)
-                            TextField("Rechercher une ville dans le monde", text: $query)
-                                .autocorrectionDisabled()
-                                .textInputAutocapitalization(.words)
-                            if !query.isEmpty {
-                                Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
+                        HStack(spacing: 11) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "magnifyingglass")
+                                    .foregroundStyle(Theme.dim)
+                                TextField("Rechercher une ville dans le monde", text: $query)
+                                    .foregroundStyle(Theme.ink)
+                                    .autocorrectionDisabled()
+                                    .textInputAutocapitalization(.words)
+                                    .accessibilityLabel("Rechercher une ville dans le monde")
+                                if !query.isEmpty {
+                                    Button { query = "" } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundStyle(Theme.dim)
+                                    }
                                     .accessibilityLabel("Effacer la recherche")
+                                }
                             }
-                        }.padding(.vertical, 14)
+                            .padding(.horizontal, 16)
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .background(searchSurface, in: Capsule())
+                            .overlay(Capsule().strokeBorder(Theme.line.opacity(0.55), lineWidth: 0.5))
+
+                            Button(action: locateCity) {
+                                Group {
+                                    if isLocating {
+                                        ProgressView().tint(Theme.ink)
+                                    } else {
+                                        Image(systemName: "location.viewfinder")
+                                            .font(.system(size: 19, weight: .medium))
+                                            .foregroundStyle(Theme.ink)
+                                    }
+                                }
+                                .frame(width: 48, height: 48)
+                                .background(locationSurface, in: Circle())
+                                .overlay(Circle().strokeBorder(Theme.line, lineWidth: 0.5))
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(isLocating)
+                            .accessibilityLabel(isLocating ? "Localisation en cours" : "Trouver ma ville actuelle")
+                            .accessibilityHint("Recherche votre ville à partir de votre position")
+                        }
+                        .padding(.vertical, 14)
+                        if let locationNotice {
+                            Text(locationNotice)
+                                .font(.caption)
+                                .foregroundStyle(Theme.dim)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.bottom, 8)
+                        }
                         if !query.isEmpty {
                             Text("Villes suivies").font(.headline).frame(maxWidth: .infinity, alignment: .leading)
                         }
@@ -110,7 +165,10 @@ struct ClocksListView: View {
                     .padding(.horizontal, 20)
             }
         }
-        .onChange(of: query) { scheduleWorldwideSearch($0) }
+        .onChange(of: query) {
+            locationNotice = nil
+            scheduleWorldwideSearch($0)
+        }
         .onDisappear { worldwideTask?.cancel() }
         .sheet(item: $preview) { location in
             CitySearchPreview(location: location, isSaved: viewModel.savedMatch(for: location) != nil) {
@@ -126,6 +184,51 @@ struct ClocksListView: View {
         }
         .sheet(isPresented: $showOrganizer) {
             NavigationStack { CityOrganizerView().toolbar { Button("Fermer") { showOrganizer = false } } }
+        }
+        .confirmationDialog("Ajouter cette ville aux horloges ?",
+                            isPresented: $showLocationProposal,
+                            titleVisibility: .visible) {
+            if let locatedCity {
+                Button("Ajouter \(locatedCity.name)") {
+                    viewModel.addAndSelect(locatedCity)
+                    query = locatedCity.name
+                    locationNotice = "\(locatedCity.name) a été ajoutée aux horloges."
+                    self.locatedCity = nil
+                }
+            }
+            Button("Annuler", role: .cancel) { locatedCity = nil }
+        } message: {
+            if let locatedCity {
+                Text("\(locatedCity.name), \(locatedCity.countrySubtitle) · \(locatedCity.timeZoneIdentifier)")
+            }
+        }
+        .alert("Localisation indisponible", isPresented: $showLocationError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(locationError)
+        }
+    }
+
+    private func locateCity() {
+        guard !isLocating else { return }
+        isLocating = true
+        locationNotice = nil
+        Task {
+            defer { isLocating = false }
+            do {
+                let city = try await viewModel.locateCurrentCity()
+                if let followed = viewModel.followedCity(matching: city) {
+                    viewModel.select(followed.id)
+                    query = followed.name
+                    locationNotice = "\(followed.name) est déjà dans vos horloges."
+                } else {
+                    locatedCity = city
+                    showLocationProposal = true
+                }
+            } catch {
+                locationError = error.localizedDescription
+                showLocationError = true
+            }
         }
     }
 

@@ -337,6 +337,28 @@ final class LocationsViewModel: ObservableObject {
 
     // MARK: - Ma position
 
+    /// Résout la ville actuelle sans modifier la liste des villes suivies.
+    func locateCurrentCity() async throws -> Location {
+        let coordinate = try await locationProvider.request()
+        let place = try await service.reverseGeocode(latitude: coordinate.latitude,
+                                                     longitude: coordinate.longitude)
+        return Location(name: place.name,
+                        region: place.region,
+                        country: place.country,
+                        latitude: coordinate.latitude,
+                        longitude: coordinate.longitude,
+                        timeZoneIdentifier: place.timeZoneIdentifier)
+    }
+
+    /// Le GPS fournit une position précise, tandis qu'une ville enregistrée
+    /// peut utiliser les coordonnées de son centre : on compare leurs noms.
+    func followedCity(matching city: Location) -> Location? {
+        locations.first { saved in
+            saved.name.compare(city.name, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame &&
+            saved.countrySubtitle.compare(city.countrySubtitle, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+        }
+    }
+
     /// Détecte la position de l'utilisateur et l'ajoute comme ville suivie.
     func addCurrentLocation() async {
         do {
